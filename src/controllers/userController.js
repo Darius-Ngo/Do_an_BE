@@ -1,4 +1,3 @@
-const { User } = require("../model");
 const connection = require("../config/connectDB");
 
 const userController = {
@@ -7,18 +6,47 @@ const userController = {
     const { currentPage = 1, pageSize = 10000, textSearch = "" } = req.query;
     const startIndex = (currentPage - 1) * pageSize;
     try {
-      const query = `SELECT * FROM nguoi_dung WHERE ho_ten LIKE '${`%${textSearch}%`}' LIMIT ${startIndex}, ${parseInt(
-        pageSize
-      )}`;
-      connection.query(query, (err, results) => {
-        if (err) {
-          console.error("Lỗi truy vấn:", err);
-          res.status(500).send("Lỗi truy vấn cơ sở dữ liệu");
-        } else {
-          // res.json(results);
-          res.status(200).json(results);
+      connection.query(
+        "SELECT COUNT(*) AS total FROM nguoi_dung",
+        (err, countResult) => {
+          if (err) {
+            res.status(500).json({
+              status: 500,
+              isError: true,
+              isOk: false,
+              Object: "Lỗi truy vấn cơ sở dữ liệu",
+            });
+            return;
+          }
+          const total = countResult[0].total;
+          const query = `SELECT * FROM nguoi_dung WHERE ho_ten LIKE '${`%${textSearch}%`}' LIMIT ${startIndex}, ${parseInt(
+            pageSize
+          )}`;
+          connection.query(query, (err, results) => {
+            let data;
+            if (err) {
+              data = {
+                status: 500,
+                isError: true,
+                isOk: false,
+                Object: "Lỗi truy vấn cơ sở dữ liệu",
+              };
+              res.status(500).json(data);
+            } else {
+              data = {
+                status: 200,
+                isError: false,
+                isOk: true,
+                Object: {
+                  total: total,
+                  data: results,
+                },
+              };
+              res.status(200).json(data);
+            }
+          });
         }
-      });
+      );
     } catch (err) {
       res.status(500).json(err.message);
     }
@@ -29,11 +57,23 @@ const userController = {
     try {
       const query = `SELECT * FROM nguoi_dung WHERE id = ${req.params.id}`;
       connection.query(query, (err, results) => {
+        let data;
         if (err) {
-          console.error("Lỗi truy vấn:", err);
-          res.status(500).send("Lỗi truy vấn cơ sở dữ liệu");
+          data = {
+            status: 500,
+            isError: true,
+            isOk: false,
+            Object: "Lỗi truy vấn cơ sở dữ liệu",
+          };
+          res.status(500).json(data);
         } else {
-          res.status(200).json(results[0]);
+          data = {
+            status: 200,
+            isError: false,
+            isOk: true,
+            Object: results[0],
+          };
+          res.status(200).json(data);
         }
       });
     } catch (err) {
@@ -62,11 +102,23 @@ const userController = {
         gioi_tinh
       )}, '${sdt}')`;
       connection.query(query, (err, results) => {
+        let data;
         if (err) {
-          console.error("Lỗi truy vấn:", err);
-          res.status(500).send("Lỗi truy vấn cơ sở dữ liệu");
+          data = {
+            status: 500,
+            isError: true,
+            isOk: false,
+            Object: "Lỗi truy vấn cơ sở dữ liệu",
+          };
+          res.status(500).json(data);
         } else {
-          res.status(200).json({ message: "Thêm người dùng thành công." });
+          data = {
+            status: 200,
+            isError: false,
+            isOk: true,
+            Object: "Thêm người dùng thành công.",
+          };
+          res.status(200).json(data);
         }
       });
     } catch (error) {
@@ -96,11 +148,23 @@ const userController = {
       )}, sdt = '${sdt}'
       WHERE id = ${id}`;
       connection.query(query, (err, results) => {
+        let data;
         if (err) {
-          console.error("Lỗi truy vấn:", err);
-          res.status(500).send("Lỗi truy vấn cơ sở dữ liệu");
+          data = {
+            status: 500,
+            isError: true,
+            isOk: false,
+            Object: "Lỗi truy vấn cơ sở dữ liệu",
+          };
+          res.status(500).json(data);
         } else {
-          res.status(200).json({ message: "Cập nhật người dùng thành công." });
+          data = {
+            status: 200,
+            isError: false,
+            isOk: true,
+            Object: "Cập nhật người dùng thành công.",
+          };
+          res.status(200).json(data);
         }
       });
     } catch (error) {
@@ -113,17 +177,32 @@ const userController = {
     try {
       const query = `DELETE FROM nguoi_dung WHERE id = ${req.params.id}`;
       connection.query(query, (err, results) => {
+        let data;
         if (err) {
-          console.error("Lỗi truy vấn:", err);
-          res.status(500).send("Lỗi truy vấn cơ sở dữ liệu");
+          data = {
+            status: 500,
+            isError: true,
+            isOk: false,
+            Object: "Lỗi truy vấn cơ sở dữ liệu",
+          };
+          res.status(500).json(data);
         } else {
-          console.log("results******************", results);
           if (results.affectedRows === 0) {
-            res.status(200).json({
-              message: `Không tồn tại người dùng có id = ${req.params.id}`,
-            });
+            data = {
+              status: 200,
+              isError: false,
+              isOk: true,
+              Object: `Không tồn tại người dùng có id = ${req.params.id}`,
+            };
+            res.status(200).json(data);
           } else {
-            res.status(200).json({ message: "Xóa người dùng thành công." });
+            data = {
+              status: 200,
+              isError: false,
+              isOk: true,
+              Object: "Xóa người dùng thành công.",
+            };
+            res.status(200).json(data);
           }
         }
       });

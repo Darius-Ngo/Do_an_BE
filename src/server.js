@@ -5,6 +5,9 @@ const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const port = process.env.PORT || 3000;
 const userRoute = require("./routers/userRoute");
+const categoryRouter = require("./routers/categoryRouter");
+const productRouter = require("./routers/productRouter");
+const regionRouter = require("./routers/regionRouter");
 // const connectDB = require("./config/connectDB");
 
 //connect DB
@@ -18,6 +21,9 @@ app.use(express.json());
 
 //routers
 app.use("/api/user", userRoute);
+app.use("/api/category", categoryRouter);
+app.use("/api/product", productRouter);
+app.use("/api/region", regionRouter);
 
 app.listen(port, () => {
   console.log(`Server is running in port ${port}`);
