@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const morgan = require("morgan");
+var cookieParser = require("cookie-parser");
 const port = process.env.PORT || 3000;
 const userRoute = require("./routers/userRoute");
 const categoryRouter = require("./routers/categoryRouter");
