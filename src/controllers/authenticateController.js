@@ -1,10 +1,130 @@
 const connection = require("../config/connectDB");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 const timeTokenDefault = Math.floor(Date.now() / 1000) + 60 * 0;
 const timeRefreshTokenDefault = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 const moment = require("moment");
-const con = db.promise();
+// const con = db.promise();
 const authenticateController = {
+  // REGISTER
+  register: async (req, res) => {
+    try {
+      const {
+        avatar,
+        username,
+        password,
+        ho_ten,
+        ngay_sinh,
+        thon_xom,
+        email,
+        gioi_tinh,
+        sdt,
+        id_phan_quyen = 1,
+        id_tp,
+        id_qh,
+        id_xp,
+      } = req.body;
+      const salt = await bcrypt.genSalt(10);
+      const hashed = await bcrypt.hash(password, salt);
+      const query = `
+      INSERT INTO nguoi_dung (avatar, username, password, ho_ten, ngay_sinh, thon_xom, email, gioi_tinh, sdt, id_phan_quyen) 
+      VALUES ('${avatar}', '${username}', '${hashed}', '${ho_ten}', '${ngay_sinh}', '${thon_xom}', '${email}', ${parseInt(
+        gioi_tinh
+      )}, '${sdt}', ${id_phan_quyen}, ${id_tp}, ${id_qh}, ${id_xp})`;
+      connection.query(query, (err, results) => {
+        let data;
+        if (err) {
+          data = {
+            status: 500,
+            isError: true,
+            isOk: false,
+            Object: "Lỗi truy vấn cơ sở dữ liệu",
+          };
+          res.status(500).json(data);
+        } else {
+          data = {
+            status: 200,
+            isError: false,
+            isOk: true,
+            Object: "Thêm người dùng thành công.",
+          };
+          res.status(200).json(data);
+        }
+      });
+    } catch (err) {
+      res.status(500).json(err);
+    }
+  },
+
+  //LOGIN
+  login: async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      if (!username && !password) {
+        res.status(200).json({
+          Object: "Tên đăng nhập hoặc mật khẩu không được để trống!",
+          status: 0,
+          isError: true,
+          isOk: false,
+        });
+      }
+      const query = `SELECT * FROM nguoi_dung WHERE username = '${username}' AND trang_thai = 1`;
+      connection.query(query, async (err, results) => {
+        if (err) {
+          throw err;
+        }
+        if (results.length === 0) {
+          return res.status(200).json({
+            Object: "Tên đăng nhập không chính xác hoặc tài khoản đã bị khóa!",
+            status: 0,
+            isError: true,
+            isOk: false,
+          });
+        }
+        const user = results[0];
+        bcrypt.compare(password, user.password, (bcryptError, bcryptResult) => {
+          if (bcryptError) {
+            throw bcryptError;
+          }
+          if (!bcryptResult) {
+            return res.status(200).json({
+              Object: "Mật khẩu không chính xác!",
+              Status: 200,
+              isError: true,
+              isOk: false,
+            });
+          }
+          const token = jwt.sign(
+            { id: user.id, username: user.username },
+            process.env.TOKEN_KEY,
+            {
+              expiresIn: "1h",
+            }
+          );
+          res.status(200).json({
+            status: 200,
+            isOk: true,
+            isError: false,
+            Object: {
+              ...user,
+              token: token,
+            },
+          });
+        });
+      });
+    } catch (err) {
+      res.status(500).json(err);
+    }
+  },
+  //LOGOUT
+  logout: async (req, res, next) => {
+    // Clearing the cookie
+    // req.clearCookie("refreshToken");
+    res
+      .status(200)
+      .clearCookie("refreshToken")
+      .json({ Status: 200, Object: null, isOk: true, isError: false });
+  },
   // * Middleware xác thực người dùng dựa vào mã token
   TokenCheckMiddleware: async (req, res, next) => {
     // Lấy thông tin mã token được đính kèm trong request
@@ -81,17 +201,8 @@ const authenticateController = {
     res.json({ data1: rows, data2: rows2 });
   },
 
-  //logout
-  logout: async (req, res, next) => {
-    // Clearing the cookie
-    // req.clearCookie("refreshToken");
-    res
-      .status(200)
-      .clearCookie("refreshToken")
-      .json({ Status: 0, Object: null, isOk: true, isError: false });
-  },
   //Login
-  login: async (req, res, next) => {
+  login2: async (req, res, next) => {
     const { username, password } = req.body;
     if (!username && !password) {
       res.status(500).json({

@@ -3,11 +3,19 @@ const connection = require("../config/connectDB");
 const productController = {
   //GET ALL PRODUCT
   getListProduct: async (req, res) => {
-    const { currentPage = 1, pageSize = 10000, textSearch = "" } = req.query;
+    const {
+      currentPage = 1,
+      pageSize = 10000,
+      textSearch = "",
+      status,
+      id_loai_san_pham,
+    } = req.body;
     const startIndex = (currentPage - 1) * pageSize;
     try {
       connection.query(
-        "SELECT COUNT(*) AS total FROM san_pham",
+        `SELECT COUNT(*) AS total FROM san_pham WHERE id_loai_san_pham = ${id_loai_san_pham} ${
+          status >= 0 ? `AND trang_thai = ${status}` : ""
+        }`,
         (err, countResult) => {
           if (err) {
             res.status(500).json({
@@ -19,7 +27,9 @@ const productController = {
             return;
           }
           const total = countResult[0].total;
-          const query = `SELECT * FROM san_pham WHERE ten_san_pham LIKE '${`%${textSearch}%`}' LIMIT ${startIndex}, ${parseInt(
+          const query = `SELECT * FROM san_pham WHERE id_loai_san_pham = ${id_loai_san_pham} AND 
+          ${status >= 0 ? `trang_thai = ${status} AND` : ""} 
+          ten_san_pham LIKE '${`%${textSearch}%`}' LIMIT ${startIndex}, ${parseInt(
             pageSize
           )}`;
           connection.query(query, (err, results) => {
@@ -113,22 +123,22 @@ const productController = {
   //ADD PRODUCT
   addProduct: async (req, res) => {
     const {
-      anh,
-      ten_san_pham,
-      mo_ta,
-      gia_ban_sizes,
-      gia_ban_sizem,
-      gia_ban_sizel,
-      id_loai_san_pham,
+      anh = "",
+      ten_san_pham = "",
+      mo_ta = "",
+      ghi_chu = "",
+      gia_ban_sizes = null,
+      gia_ban_sizem = null,
+      gia_ban_sizel = null,
+      id_loai_san_pham = null,
+      giam_gia,
+      ngay_bd = "",
+      ngay_kt = "",
     } = req.body;
     try {
       const query = `
-        INSERT INTO san_pham (anh, ten_san_pham, mo_ta, gia_ban_sizes, gia_ban_sizem, gia_ban_sizel, id_loai_san_pham) 
-        VALUES ('${anh}', '${ten_san_pham}', '${mo_ta}', ${parseInt(
-        gia_ban_sizes
-      )}, ${parseInt(gia_ban_sizem)}, ${parseInt(gia_ban_sizel)}, ${parseInt(
-        id_loai_san_pham
-      )})`;
+        INSERT INTO san_pham (anh, ten_san_pham, mo_ta, gia_ban_sizes, gia_ban_sizem, gia_ban_sizel, id_loai_san_pham, giam_gia, ngay_bd, ngay_kt, ghi_chu) 
+        VALUES ('${anh}', '${ten_san_pham}', '${mo_ta}', ${gia_ban_sizes}, ${gia_ban_sizem}, ${gia_ban_sizel}, ${id_loai_san_pham}, ${giam_gia}, '${ngay_bd}', '${ngay_kt}', '${ghi_chu}')`;
       connection.query(query, (err, results) => {
         let data;
         if (err) {
@@ -158,17 +168,30 @@ const productController = {
   updateProduct: async (req, res) => {
     const {
       id,
-      anh,
-      ten_san_pham,
-      mo_ta,
-      gia_ban_sizes,
-      gia_ban_sizem,
-      gia_ban_sizel,
+      anh = "",
+      ten_san_pham = "",
+      mo_ta = "",
+      ghi_chu = "",
+      gia_ban_sizes = null,
+      gia_ban_sizem = null,
+      gia_ban_sizel = null,
+      id_loai_san_pham = null,
+      giam_gia = null,
+      ngay_bd = "",
+      ngay_kt = "",
     } = req.body;
     try {
+      if (!id)
+        return res.status(200).json({
+          status: 0,
+          isError: true,
+          isOk: false,
+          Object: "Id sản phẩm đâu rồi!",
+        });
       const query = `
       UPDATE san_pham
-      SET anh = '${anh}', ten_san_pham = '${ten_san_pham}', mo_ta = '${mo_ta}', gia_ban_sizes = ${gia_ban_sizes}, gia_ban_sizem = ${gia_ban_sizem}, gia_ban_sizel = ${gia_ban_sizel}
+      SET anh = '${anh}', ten_san_pham = '${ten_san_pham}', ghi_chu = '${ghi_chu}', mo_ta = '${mo_ta}', gia_ban_sizes = ${gia_ban_sizes}, gia_ban_sizem = ${gia_ban_sizem}, gia_ban_sizel = ${gia_ban_sizel}, 
+      id_loai_san_pham = ${id_loai_san_pham}, giam_gia = ${giam_gia}, ngay_bd = '${ngay_bd}', ngay_kt = '${ngay_kt}'
       WHERE id = ${id}`;
       connection.query(query, (err, results) => {
         let data;
@@ -231,6 +254,42 @@ const productController = {
       });
     } catch (err) {
       res.status(500).json(err.message);
+    }
+  },
+  //CHANGE STATUS PRODUCT
+  changeStatus: async (req, res) => {
+    const { id, isLock = null } = req.body;
+    try {
+      if (!id)
+        return res.status(200).json({
+          status: 0,
+          isError: true,
+          isOk: false,
+          Object: "Id sản phẩm đâu rồi!",
+        });
+      const query = `
+      UPDATE san_pham
+      SET trang_thai = ${isLock ? 0 : 1}
+      WHERE id = ${id}`;
+      connection.query(query, (err, results) => {
+        if (err) {
+          res.status(500).json({
+            status: 500,
+            isError: true,
+            isOk: false,
+            Object: "Lỗi truy vấn cơ sở dữ liệu",
+          });
+        } else {
+          res.status(200).json({
+            status: 200,
+            isError: false,
+            isOk: true,
+            Object: "Cập nhật trạng thái sản phẩm thành công.",
+          });
+        }
+      });
+    } catch (error) {
+      res.status(500).json(error.message);
     }
   },
 };
