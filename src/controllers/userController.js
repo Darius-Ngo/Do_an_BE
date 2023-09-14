@@ -23,7 +23,7 @@ const userController = {
               status: 500,
               isError: true,
               isOk: false,
-              Object: "Lỗi truy vấn cơ sở dữ liệu",
+              Object: err,
             });
             return;
           }
@@ -48,7 +48,7 @@ const userController = {
                 status: 500,
                 isError: true,
                 isOk: false,
-                Object: "Lỗi truy vấn cơ sở dữ liệu",
+                Object: err,
               };
               res.status(500).json(data);
             } else {
@@ -88,7 +88,7 @@ const userController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           };
           res.status(500).json(data);
         } else {
@@ -152,7 +152,7 @@ const userController = {
                 status: 500,
                 isError: true,
                 isOk: false,
-                Object: "Lỗi truy vấn cơ sở dữ liệu",
+                Object: err,
               };
               res.status(500).json(data);
             } else {
@@ -210,7 +210,7 @@ const userController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           });
         } else {
           res.status(200).json({
@@ -237,7 +237,7 @@ const userController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           };
           res.status(500).json(data);
         } else {
@@ -286,7 +286,7 @@ const userController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           });
         } else {
           res.status(200).json({
@@ -324,7 +324,7 @@ const userController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           });
         } else {
           res.status(200).json({

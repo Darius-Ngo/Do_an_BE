@@ -1,5 +1,5 @@
 const connection = require("../config/connectDB");
-
+const con = connection.promise();
 const productController = {
   //GET ALL PRODUCT
   getListProduct: async (req, res) => {
@@ -22,7 +22,7 @@ const productController = {
               status: 500,
               isError: true,
               isOk: false,
-              Object: "Lỗi truy vấn cơ sở dữ liệu",
+              Object: err,
             });
             return;
           }
@@ -39,7 +39,7 @@ const productController = {
                 status: 500,
                 isError: true,
                 isOk: false,
-                Object: "Lỗi truy vấn cơ sở dữ liệu",
+                Object: err,
               };
               res.status(500).json(data);
             } else {
@@ -73,7 +73,7 @@ const productController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           };
           res.status(500).json(data);
         } else {
@@ -102,7 +102,7 @@ const productController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           };
           res.status(500).json(data);
         } else {
@@ -131,7 +131,7 @@ const productController = {
       gia_ban_sizem = null,
       gia_ban_sizel = null,
       id_loai_san_pham = null,
-      giam_gia,
+      giam_gia = 0,
       ngay_bd = "",
       ngay_kt = "",
     } = req.body;
@@ -146,7 +146,7 @@ const productController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           };
           res.status(500).json(data);
         } else {
@@ -177,6 +177,7 @@ const productController = {
       gia_ban_sizel = null,
       id_loai_san_pham = null,
       giam_gia = null,
+      trang_thai_sp = null,
       ngay_bd = "",
       ngay_kt = "",
     } = req.body;
@@ -191,7 +192,7 @@ const productController = {
       const query = `
       UPDATE san_pham
       SET anh = '${anh}', ten_san_pham = '${ten_san_pham}', ghi_chu = '${ghi_chu}', mo_ta = '${mo_ta}', gia_ban_sizes = ${gia_ban_sizes}, gia_ban_sizem = ${gia_ban_sizem}, gia_ban_sizel = ${gia_ban_sizel}, 
-      id_loai_san_pham = ${id_loai_san_pham}, giam_gia = ${giam_gia}, ngay_bd = '${ngay_bd}', ngay_kt = '${ngay_kt}'
+      id_loai_san_pham = ${id_loai_san_pham}, giam_gia = ${giam_gia}, ngay_bd = '${ngay_bd}', ngay_kt = '${ngay_kt}', trang_thai_sp = ${trang_thai_sp}
       WHERE id = ${id}`;
       connection.query(query, (err, results) => {
         let data;
@@ -200,7 +201,7 @@ const productController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           };
           res.status(500).json(data);
         } else {
@@ -229,7 +230,7 @@ const productController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           };
           res.status(500).json(data);
         } else {
@@ -269,7 +270,7 @@ const productController = {
         });
       const query = `
       UPDATE san_pham
-      SET trang_thai = ${isLock ? 0 : 1}
+      SET trang_thai_sp = ${isLock ? 0 : 1}
       WHERE id = ${id}`;
       connection.query(query, (err, results) => {
         if (err) {
@@ -277,7 +278,7 @@ const productController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           });
         } else {
           res.status(200).json({

@@ -17,13 +17,12 @@ const categoryController = {
         }`,
         (err, countResult) => {
           if (err) {
-            res.status(500).json({
+            return res.status(500).json({
               status: 500,
               isError: true,
               isOk: false,
-              Object: "Lỗi truy vấn cơ sở dữ liệu",
+              Object: err,
             });
-            return;
           }
           const total = countResult[0].total;
           const query = `SELECT * FROM loai_san_pham WHERE ${
@@ -32,17 +31,15 @@ const categoryController = {
             pageSize
           )}`;
           connection.query(query, (err, results) => {
-            let data;
             if (err) {
-              data = {
+              res.status(500).json({
                 status: 500,
                 isError: true,
                 isOk: false,
-                Object: "Lỗi truy vấn cơ sở dữ liệu",
-              };
-              res.status(500).json(data);
+                Object: err,
+              });
             } else {
-              data = {
+              res.status(200).json({
                 status: 200,
                 isError: false,
                 isOk: true,
@@ -50,8 +47,7 @@ const categoryController = {
                   total: total,
                   data: results,
                 },
-              };
-              res.status(200).json(data);
+              });
             }
           });
         }
@@ -72,7 +68,7 @@ const categoryController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           };
           res.status(500).json(data);
         } else {
@@ -92,7 +88,12 @@ const categoryController = {
 
   //ADD CATEGORY
   addCategory: async (req, res) => {
-    const { anh, ten_loai_san_pham, mo_ta, ghi_chu } = req.body;
+    const {
+      anh = "",
+      ten_loai_san_pham = "",
+      mo_ta = "",
+      ghi_chu = "",
+    } = req.body;
     try {
       const query = `
         INSERT INTO loai_san_pham (anh, ten_loai_san_pham, mo_ta, ghi_chu) 
@@ -104,7 +105,7 @@ const categoryController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           };
           res.status(500).json(data);
         } else {
@@ -151,7 +152,7 @@ const categoryController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: err || "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err || err,
           };
           res.status(500).json(data);
         } else {
@@ -180,7 +181,7 @@ const categoryController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           };
           res.status(500).json(data);
         } else {
@@ -228,7 +229,7 @@ const categoryController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           });
         } else {
           res.status(200).json({
@@ -241,6 +242,45 @@ const categoryController = {
       });
     } catch (error) {
       res.status(500).json(error.message);
+    }
+  },
+  // GET LIST CATEGORY IN HOME
+  getListCategoryInHome: async (req, res) => {
+    try {
+      const query1 = `SELECT * FROM loai_san_pham WHERE trang_thai = 1`;
+      connection.query(query1, (err, resultsCategory) => {
+        if (err)
+          return res.status(500).json({
+            status: 500,
+            isError: true,
+            isOk: false,
+            Object: err,
+          });
+        const query2 = `SELECT * FROM san_pham WHERE trang_thai_sp = 1`;
+        connection.query(query2, (err, resultsProduct) => {
+          if (err)
+            return res.status(500).json({
+              status: 500,
+              isError: true,
+              isOk: false,
+              Object: err,
+            });
+          const data = resultsCategory.map((i) => ({
+            ...i,
+            ds_san_pham: resultsProduct.filter(
+              (j) => j.id_loai_san_pham === i.id
+            ),
+          }));
+          res.status(200).json({
+            status: 200,
+            isError: false,
+            isOk: true,
+            Object: data,
+          });
+        });
+      });
+    } catch (err) {
+      res.status(500).json(err.message);
     }
   },
 };

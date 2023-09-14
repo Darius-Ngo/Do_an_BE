@@ -14,7 +14,7 @@ const cartController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           });
         } else {
           res.status(200).json({
@@ -42,7 +42,7 @@ const cartController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           });
         }
         if (results.length === 0) {
@@ -56,7 +56,7 @@ const cartController = {
                 status: 500,
                 isError: true,
                 isOk: false,
-                Object: "Lỗi truy vấn cơ sở dữ liệu",
+                Object: err,
               };
               res.status(500).json(data);
             } else {

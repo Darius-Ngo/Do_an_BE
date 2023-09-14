@@ -38,7 +38,7 @@ const authenticateController = {
             status: 500,
             isError: true,
             isOk: false,
-            Object: "Lỗi truy vấn cơ sở dữ liệu",
+            Object: err,
           };
           res.status(500).json(data);
         } else {
