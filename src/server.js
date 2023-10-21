@@ -12,8 +12,9 @@ const regionRouter = require("./routers/regionRouter");
 const authenticateRouter = require("./routers/authenticateRouter");
 const uploadFileRouter = require("./routers/uploadFileRouter");
 const cartRouter = require("./routers/cartRouter");
+const orderRouter = require("./routers/orderRouter");
+const rateRouter = require("./routers/rateRouter");
 // const connectDB = require("./config/connectDB");
-
 //connect DB
 // connectDB();
 
@@ -32,6 +33,8 @@ app.use("/api/region", regionRouter);
 app.use("/api/authenticate", authenticateRouter);
 app.use("/api/upload", uploadFileRouter);
 app.use("/api/cart", cartRouter);
+app.use("/api/order", orderRouter);
+app.use("/api/rate", rateRouter);
 
 app.listen(port, () => {
   console.log(`Server is running in port ${port}`);

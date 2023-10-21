@@ -4,7 +4,7 @@ const router = require("express").Router();
 
 router.post("/getListProduct", productController.getListProduct);
 router.get("/getDetailProduct/:id", productController.getDetailProduct);
-router.post(
+router.get(
   "/getProductByCategoryID/:id",
   productController.getProductByCategoryID
 );

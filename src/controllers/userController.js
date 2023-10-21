@@ -42,17 +42,15 @@ const userController = {
             pageSize
           )}`;
           connection.query(query, (err, results) => {
-            let data;
             if (err) {
-              data = {
+              res.status(500).json({
                 status: 500,
                 isError: true,
                 isOk: false,
                 Object: err,
-              };
-              res.status(500).json(data);
+              });
             } else {
-              data = {
+              res.status(200).json({
                 status: 200,
                 isError: false,
                 isOk: true,
@@ -60,8 +58,7 @@ const userController = {
                   total: total,
                   data: results,
                 },
-              };
-              res.status(200).json(data);
+              });
             }
           });
         }

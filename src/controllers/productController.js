@@ -14,7 +14,7 @@ const productController = {
     try {
       connection.query(
         `SELECT COUNT(*) AS total FROM san_pham WHERE id_loai_san_pham = ${id_loai_san_pham} ${
-          status >= 0 ? `AND trang_thai = ${status}` : ""
+          status >= 0 ? `AND trang_thai_sp = ${status}` : ""
         }`,
         (err, countResult) => {
           if (err) {
@@ -28,7 +28,7 @@ const productController = {
           }
           const total = countResult[0].total;
           const query = `SELECT * FROM san_pham WHERE id_loai_san_pham = ${id_loai_san_pham} AND 
-          ${status >= 0 ? `trang_thai = ${status} AND` : ""} 
+          ${status >= 0 ? `trang_thai_sp = ${status} AND` : ""} 
           ten_san_pham LIKE '${`%${textSearch}%`}' LIMIT ${startIndex}, ${parseInt(
             pageSize
           )}`;
@@ -66,24 +66,22 @@ const productController = {
   getDetailProduct: async (req, res) => {
     try {
       const query = `SELECT * FROM san_pham WHERE id = ${req.params.id}`;
-      connection.query(query, (err, results) => {
-        let data;
+      connection.query(query, async (err, results) => {
         if (err) {
-          data = {
+          res.status(500).json({
             status: 500,
             isError: true,
             isOk: false,
             Object: err,
-          };
-          res.status(500).json(data);
+          });
         } else {
-          data = {
+          const productDetail = results[0];
+          res.status(200).json({
             status: 200,
             isError: false,
             isOk: true,
-            Object: results[0],
-          };
-          res.status(200).json(data);
+            Object: productDetail,
+          });
         }
       });
     } catch (err) {
@@ -186,7 +184,6 @@ const productController = {
         return res.status(200).json({
           status: 0,
           isError: true,
-          isOk: false,
           Object: "Id sản phẩm đâu rồi!",
         });
       const query = `

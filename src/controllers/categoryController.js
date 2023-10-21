@@ -253,7 +253,6 @@ const categoryController = {
           return res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
           });
         const query2 = `SELECT * FROM san_pham WHERE trang_thai_sp = 1`;
@@ -262,7 +261,6 @@ const categoryController = {
             return res.status(500).json({
               status: 500,
               isError: true,
-              isOk: false,
               Object: err,
             });
           const data = resultsCategory.map((i) => ({
