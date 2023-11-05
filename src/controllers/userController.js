@@ -16,13 +16,12 @@ const userController = {
       connection.query(
         `SELECT COUNT(*) AS total FROM nguoi_dung WHERE ${
           isCustomer ? "id_phan_quyen = 3" : "id_phan_quyen <> 3"
-        } ${status >= 0 ? `AND trang_thai = ${status}` : ""}`,
+        } ${status > 0 ? `AND trang_thai = ${status}` : ""}`,
         (err, countResult) => {
           if (err) {
             res.status(500).json({
               status: 500,
               isError: true,
-              isOk: false,
               Object: err,
             });
             return;
@@ -37,7 +36,7 @@ const userController = {
           WHERE ${
             isCustomer ? `id_phan_quyen = 3 AND` : "id_phan_quyen <> 3 AND"
           }  ${
-            status >= 0 ? `trang_thai = ${status} AND` : ""
+            status > 0 ? `trang_thai = ${status} AND` : ""
           } ho_ten LIKE '${`%${textSearch}%`}' LIMIT ${startIndex}, ${parseInt(
             pageSize
           )}`;
@@ -46,14 +45,12 @@ const userController = {
               res.status(500).json({
                 status: 500,
                 isError: true,
-                isOk: false,
                 Object: err,
               });
             } else {
               res.status(200).json({
                 status: 200,
                 isError: false,
-                isOk: true,
                 Object: {
                   total: total,
                   data: results,
@@ -270,12 +267,11 @@ const userController = {
         return res.status(200).json({
           status: 0,
           isError: true,
-          isOk: false,
           Object: "Id người dùng đâu rồi!",
         });
       const query = `
       UPDATE nguoi_dung
-      SET trang_thai = ${isLock ? 0 : 1}
+      SET trang_thai = ${isLock ? 2 : 1}
       WHERE id = ${id}`;
       connection.query(query, (err, results) => {
         if (err) {

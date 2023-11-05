@@ -1,4 +1,5 @@
 const connection = require("../config/connectDB");
+const moment = require("moment");
 
 const categoryController = {
   //GET ALL CATEGORY
@@ -13,20 +14,19 @@ const categoryController = {
     try {
       connection.query(
         `SELECT COUNT(*) AS total FROM loai_san_pham  ${
-          status >= 0 ? `WHERE trang_thai = ${status}` : ""
+          status > 0 ? `WHERE trang_thai = ${status}` : ""
         }`,
         (err, countResult) => {
           if (err) {
             return res.status(500).json({
               status: 500,
               isError: true,
-              isOk: false,
               Object: err,
             });
           }
           const total = countResult[0].total;
           const query = `SELECT * FROM loai_san_pham WHERE ${
-            status >= 0 ? `trang_thai = ${status} AND` : ""
+            status > 0 ? `trang_thai = ${status} AND` : ""
           } ten_loai_san_pham LIKE '${`%${textSearch}%`}' LIMIT ${startIndex}, ${parseInt(
             pageSize
           )}`;
@@ -35,14 +35,12 @@ const categoryController = {
               res.status(500).json({
                 status: 500,
                 isError: true,
-                isOk: false,
                 Object: err,
               });
             } else {
               res.status(200).json({
                 status: 200,
                 isError: false,
-                isOk: true,
                 Object: {
                   total: total,
                   data: results,
@@ -62,24 +60,17 @@ const categoryController = {
     try {
       const query = `SELECT * FROM loai_san_pham WHERE id = ${req.params.id}`;
       connection.query(query, (err, results) => {
-        let data;
-        if (err) {
-          data = {
+        if (err)
+          return res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
-          };
-          res.status(500).json(data);
-        } else {
-          data = {
-            status: 200,
-            isError: false,
-            isOk: true,
-            Object: results[0],
-          };
-          res.status(200).json(data);
-        }
+          });
+        res.status(200).json({
+          status: 200,
+          isError: false,
+          Object: results[0],
+        });
       });
     } catch (err) {
       res.status(500).json(err.message);
@@ -99,24 +90,17 @@ const categoryController = {
         INSERT INTO loai_san_pham (anh, ten_loai_san_pham, mo_ta, ghi_chu) 
         VALUES ('${anh}', '${ten_loai_san_pham}', '${mo_ta}', '${ghi_chu}')`;
       connection.query(query, (err, results) => {
-        let data;
-        if (err) {
-          data = {
+        if (err)
+          return res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
-          };
-          res.status(500).json(data);
-        } else {
-          data = {
-            status: 200,
-            isError: false,
-            isOk: true,
-            Object: "Thêm loại sản phẩm thành công.",
-          };
-          res.status(200).json(data);
-        }
+          });
+        res.status(200).json({
+          status: 200,
+          isError: false,
+          Object: "Thêm loại sản phẩm thành công.",
+        });
       });
     } catch (error) {
       res.status(500).json(error.message);
@@ -135,10 +119,9 @@ const categoryController = {
     } = req.body;
     try {
       if (!id)
-        return res.status(200).json({
+        return res.status(400).json({
           status: 0,
           isError: true,
-          isOk: false,
           Object: "Id danh mục đâu rồi!",
         });
       const query = `
@@ -146,24 +129,17 @@ const categoryController = {
       SET anh = '${anh}', ten_loai_san_pham = '${ten_loai_san_pham}', mo_ta = '${mo_ta}', ghi_chu = '${ghi_chu}', trang_thai = ${trang_thai}
       WHERE id = ${id}`;
       connection.query(query, (err, results) => {
-        let data;
-        if (err) {
-          data = {
+        if (err)
+          return res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err || err,
-          };
-          res.status(500).json(data);
-        } else {
-          data = {
-            status: 200,
-            isError: false,
-            isOk: true,
-            Object: "Cập nhật loại sản phẩm thành công.",
-          };
-          res.status(200).json(data);
-        }
+          });
+        res.status(200).json({
+          status: 200,
+          isError: false,
+          Object: "Cập nhật loại sản phẩm thành công.",
+        });
       });
     } catch (error) {
       res.status(500).json(error.message);
@@ -175,32 +151,25 @@ const categoryController = {
     try {
       const query = `DELETE FROM loai_san_pham WHERE id = ${req.params.id}`;
       connection.query(query, (err, results) => {
-        let data;
         if (err) {
-          data = {
+          res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
-          };
-          res.status(500).json(data);
+          });
         } else {
           if (results.affectedRows === 0) {
-            data = {
+            res.status(200).json({
               status: 200,
               isError: false,
-              isOk: true,
               Object: `Không tồn tại loại sản phẩm có id = ${req.params.id}`,
-            };
-            res.status(200).json(data);
+            });
           } else {
-            data = {
+            res.status(200).json({
               status: 200,
               isError: false,
-              isOk: true,
               Object: "Xóa loại sản phẩm thành công.",
-            };
-            res.status(200).json(data);
+            });
           }
         }
       });
@@ -216,29 +185,24 @@ const categoryController = {
         return res.status(200).json({
           status: 0,
           isError: true,
-          isOk: false,
           Object: "Id danh mục đâu rồi!",
         });
       const query = `
       UPDATE loai_san_pham
-      SET trang_thai = ${isLock ? 0 : 1}
+      SET trang_thai = ${isLock ? 2 : 1}
       WHERE id = ${id}`;
       connection.query(query, (err, results) => {
-        if (err) {
-          res.status(500).json({
+        if (err)
+          return res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
           });
-        } else {
-          res.status(200).json({
-            status: 200,
-            isError: false,
-            isOk: true,
-            Object: "Cập nhật trạng thái danh mục thành công.",
-          });
-        }
+        res.status(200).json({
+          status: 200,
+          isError: false,
+          Object: "Cập nhật trạng thái danh mục thành công.",
+        });
       });
     } catch (error) {
       res.status(500).json(error.message);
@@ -255,7 +219,12 @@ const categoryController = {
             isError: true,
             Object: err,
           });
-        const query2 = `SELECT * FROM san_pham WHERE trang_thai_sp = 1`;
+        const query2 = `SELECT s.*, IFNULL(AVG(nx.danh_gia), 0) AS danh_gia_trung_binh, IFNULL(COUNT(nx.id), 0) AS tong_danh_gia
+        FROM san_pham AS s
+        LEFT JOIN nhan_xet_san_pham AS nx ON s.id = nx.id_san_pham
+        WHERE s.trang_thai_sp = 1
+        GROUP BY s.id
+        `;
         connection.query(query2, (err, resultsProduct) => {
           if (err)
             return res.status(500).json({
@@ -265,14 +234,29 @@ const categoryController = {
             });
           const data = resultsCategory.map((i) => ({
             ...i,
-            ds_san_pham: resultsProduct.filter(
-              (j) => j.id_loai_san_pham === i.id
-            ),
+            ds_san_pham: resultsProduct
+              .filter((j) => j.id_loai_san_pham === i.id)
+              .map((i) => {
+                let isDiscord = false;
+                if (i.ngay_bd && i.ngay_kt && i.giam_gia) {
+                  const currentDate = moment();
+                  const dataMoment1 = moment(i.ngay_bd);
+                  const dataMoment2 = moment(i.ngay_kt);
+                  if (
+                    dataMoment1?.isBefore(currentDate) &&
+                    dataMoment2?.isAfter(currentDate)
+                  )
+                    isDiscord = true;
+                }
+                return {
+                  ...i,
+                  isDiscord,
+                };
+              }),
           }));
           res.status(200).json({
             status: 200,
             isError: false,
-            isOk: true,
             Object: data,
           });
         });

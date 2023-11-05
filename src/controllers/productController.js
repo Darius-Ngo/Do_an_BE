@@ -1,5 +1,6 @@
 const connection = require("../config/connectDB");
 const con = connection.promise();
+const moment = require("moment");
 const productController = {
   //GET ALL PRODUCT
   getListProduct: async (req, res) => {
@@ -14,46 +15,58 @@ const productController = {
     try {
       connection.query(
         `SELECT COUNT(*) AS total FROM san_pham WHERE id_loai_san_pham = ${id_loai_san_pham} ${
-          status >= 0 ? `AND trang_thai_sp = ${status}` : ""
+          status > 0 ? `AND trang_thai_sp = ${status}` : ""
         }`,
         (err, countResult) => {
           if (err) {
             res.status(500).json({
               status: 500,
               isError: true,
-              isOk: false,
               Object: err,
             });
             return;
           }
           const total = countResult[0].total;
-          const query = `SELECT * FROM san_pham WHERE id_loai_san_pham = ${id_loai_san_pham} AND 
-          ${status >= 0 ? `trang_thai_sp = ${status} AND` : ""} 
-          ten_san_pham LIKE '${`%${textSearch}%`}' LIMIT ${startIndex}, ${parseInt(
-            pageSize
-          )}`;
+          const query = `SELECT s.*, IFNULL(AVG(nx.danh_gia), 0) AS danh_gia_trung_binh, IFNULL(COUNT(nx.id), 0) AS tong_danh_gia
+          FROM san_pham AS s
+          LEFT JOIN nhan_xet_san_pham AS nx ON s.id = nx.id_san_pham
+          WHERE id_loai_san_pham = ${id_loai_san_pham} AND 
+          ${status > 0 ? `trang_thai_sp = ${status} AND` : ""} 
+          ten_san_pham LIKE '${`%${textSearch}%`}' 
+          GROUP BY s.id
+          LIMIT ${startIndex}, ${parseInt(pageSize)}
+          `;
           connection.query(query, (err, results) => {
-            let data;
-            if (err) {
-              data = {
+            if (err)
+              return res.status(500).json({
                 status: 500,
                 isError: true,
-                isOk: false,
                 Object: err,
-              };
-              res.status(500).json(data);
-            } else {
-              data = {
-                status: 200,
-                isError: false,
-                isOk: true,
-                Object: {
-                  total: total,
-                  data: results,
-                },
-              };
-              res.status(200).json(data);
-            }
+              });
+            res.status(200).json({
+              status: 200,
+              isError: false,
+              Object: {
+                total: total,
+                data: results.map((i) => {
+                  let isDiscord = false;
+                  if (i.ngay_bd && i.ngay_kt && i.giam_gia) {
+                    const currentDate = moment();
+                    const dataMoment1 = moment(i.ngay_bd);
+                    const dataMoment2 = moment(i.ngay_kt);
+                    if (
+                      dataMoment1?.isBefore(currentDate) &&
+                      dataMoment2?.isAfter(currentDate)
+                    )
+                      isDiscord = true;
+                  }
+                  return {
+                    ...i,
+                    isDiscord,
+                  };
+                }),
+              },
+            });
           });
         }
       );
@@ -65,22 +78,41 @@ const productController = {
   //GET DETAIL PRODUCT
   getDetailProduct: async (req, res) => {
     try {
-      const query = `SELECT * FROM san_pham WHERE id = ${req.params.id}`;
+      const query = `SELECT s.*, IFNULL(AVG(nx.danh_gia), 0) AS danh_gia_trung_binh, IFNULL(COUNT(nx.id), 0) AS tong_danh_gia
+      FROM san_pham AS s
+      LEFT JOIN nhan_xet_san_pham AS nx ON s.id = nx.id_san_pham
+      WHERE s.id = ${req.params.id}`;
       connection.query(query, async (err, results) => {
         if (err) {
           res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
           });
         } else {
           const productDetail = results[0];
+          let isDiscord = false;
+          if (
+            productDetail.ngay_bd &&
+            productDetail.ngay_kt &&
+            productDetail.giam_gia
+          ) {
+            const currentDate = moment();
+            const dataMoment1 = moment(productDetail.ngay_bd);
+            const dataMoment2 = moment(productDetail.ngay_kt);
+            if (
+              dataMoment1?.isBefore(currentDate) &&
+              dataMoment2?.isAfter(currentDate)
+            )
+              isDiscord = true;
+          }
           res.status(200).json({
             status: 200,
             isError: false,
-            isOk: true,
-            Object: productDetail,
+            Object: {
+              ...productDetail,
+              isDiscord,
+            },
           });
         }
       });
@@ -95,23 +127,33 @@ const productController = {
       const query = `SELECT * FROM san_pham WHERE id_loai_san_pham = ${req.params.id}`;
       connection.query(query, (err, results) => {
         let data;
-        if (err) {
-          data = {
+        if (err)
+          return res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
-          };
-          res.status(500).json(data);
-        } else {
-          data = {
-            status: 200,
-            isError: false,
-            isOk: true,
-            Object: results,
-          };
-          res.status(200).json(data);
-        }
+          });
+        res.status(200).json({
+          status: 200,
+          isError: false,
+          Object: results.map((i) => {
+            let isDiscord = false;
+            if (i.ngay_bd && i.ngay_kt && i.giam_gia) {
+              const currentDate = moment();
+              const dataMoment1 = moment(i.ngay_bd);
+              const dataMoment2 = moment(i.ngay_kt);
+              if (
+                dataMoment1?.isBefore(currentDate) &&
+                dataMoment2?.isAfter(currentDate)
+              )
+                isDiscord = true;
+            }
+            return {
+              ...i,
+              isDiscord,
+            };
+          }),
+        });
       });
     } catch (err) {
       res.status(500).json(err.message);
@@ -138,24 +180,17 @@ const productController = {
         INSERT INTO san_pham (anh, ten_san_pham, mo_ta, gia_ban_sizes, gia_ban_sizem, gia_ban_sizel, id_loai_san_pham, giam_gia, ngay_bd, ngay_kt, ghi_chu) 
         VALUES ('${anh}', '${ten_san_pham}', '${mo_ta}', ${gia_ban_sizes}, ${gia_ban_sizem}, ${gia_ban_sizel}, ${id_loai_san_pham}, ${giam_gia}, '${ngay_bd}', '${ngay_kt}', '${ghi_chu}')`;
       connection.query(query, (err, results) => {
-        let data;
-        if (err) {
-          data = {
+        if (err)
+          return res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
-          };
-          res.status(500).json(data);
-        } else {
-          data = {
-            status: 200,
-            isError: false,
-            isOk: true,
-            Object: "Thêm sản phẩm thành công.",
-          };
-          res.status(200).json(data);
-        }
+          });
+        res.status(200).json({
+          status: 200,
+          isError: false,
+          Object: "Thêm sản phẩm thành công.",
+        });
       });
     } catch (error) {
       res.status(500).json(error.message);
@@ -192,24 +227,17 @@ const productController = {
       id_loai_san_pham = ${id_loai_san_pham}, giam_gia = ${giam_gia}, ngay_bd = '${ngay_bd}', ngay_kt = '${ngay_kt}', trang_thai_sp = ${trang_thai_sp}
       WHERE id = ${id}`;
       connection.query(query, (err, results) => {
-        let data;
-        if (err) {
-          data = {
+        if (err)
+          return res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
-          };
-          res.status(500).json(data);
-        } else {
-          data = {
-            status: 200,
-            isError: false,
-            isOk: true,
-            Object: "Cập nhật sản phẩm thành công.",
-          };
-          res.status(200).json(data);
-        }
+          });
+        res.status(200).json({
+          status: 200,
+          isError: false,
+          Object: "Cập nhật sản phẩm thành công.",
+        });
       });
     } catch (error) {
       res.status(500).json(error.message);
@@ -221,32 +249,25 @@ const productController = {
     try {
       const query = `DELETE FROM san_pham WHERE id = ${req.params.id}`;
       connection.query(query, (err, results) => {
-        let data;
         if (err) {
-          data = {
+          res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
-          };
-          res.status(500).json(data);
+          });
         } else {
           if (results.affectedRows === 0) {
-            data = {
+            res.status(200).json({
               status: 200,
               isError: false,
-              isOk: true,
               Object: `Không tồn tại sản phẩm có id = ${req.params.id}`,
-            };
-            res.status(200).json(data);
+            });
           } else {
-            data = {
+            res.status(200).json({
               status: 200,
               isError: false,
-              isOk: true,
               Object: "Xóa sản phẩm thành công.",
-            };
-            res.status(200).json(data);
+            });
           }
         }
       });
@@ -262,29 +283,24 @@ const productController = {
         return res.status(200).json({
           status: 0,
           isError: true,
-          isOk: false,
           Object: "Id sản phẩm đâu rồi!",
         });
       const query = `
       UPDATE san_pham
-      SET trang_thai_sp = ${isLock ? 0 : 1}
+      SET trang_thai_sp = ${isLock ? 2 : 1}
       WHERE id = ${id}`;
       connection.query(query, (err, results) => {
-        if (err) {
-          res.status(500).json({
+        if (err)
+          return res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
           });
-        } else {
-          res.status(200).json({
-            status: 200,
-            isError: false,
-            isOk: true,
-            Object: "Cập nhật trạng thái sản phẩm thành công.",
-          });
-        }
+        res.status(200).json({
+          status: 200,
+          isError: false,
+          Object: "Cập nhật trạng thái sản phẩm thành công.",
+        });
       });
     } catch (error) {
       res.status(500).json(error.message);

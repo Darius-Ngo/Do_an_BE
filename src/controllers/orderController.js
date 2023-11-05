@@ -1,5 +1,6 @@
 const connection = require("../config/connectDB");
 const moment = require("moment");
+const gmailTransport = require("../config/gmailConfig");
 
 const orderController = {
   //GET TOTAL STATUS
@@ -111,6 +112,7 @@ const orderController = {
           } AND ma_don_hang LIKE '${`%${textSearch}%`}' ${
             fromDate ? `AND thoi_gian_dat >= ${fromDate}` : ""
           } ${toDate ? `AND thoi_gian_dat <= ${toDate}` : ""} 
+          ORDER BY thoi_gian_dat DESC
           LIMIT ${startIndex}, ${parseInt(pageSize)}`;
           const setBtn = (trang_thai) => {
             switch (trang_thai) {
@@ -208,7 +210,8 @@ const orderController = {
     try {
       const { id_don_hang } = req.query;
       const query = `
-      SELECT d.*, CONCAT(d.dia_chi_chi_tiet,", ", x.name,", ",q.name,", ",t.name) AS dia_chi_nhan_hang, n.avatar AS avatar_nguoi_dat
+      SELECT d.*, CONCAT(d.dia_chi_chi_tiet,", ", x.name,", ",q.name,", ",t.name) AS dia_chi_nhan_hang,
+      n.avatar AS avatar_nguoi_dat, n.email AS email_nguoi_dat
       FROM don_dat_hang AS d 
       LEFT JOIN tinh_thanh_pho AS t ON d.id_tp = t.id 
       LEFT JOIN quan_huyen AS q ON d.id_qh = q.id  
@@ -222,9 +225,10 @@ const orderController = {
             isError: true,
             Object: err,
           });
-        const queryPr = `SELECT sptd.*, sp.anh, sp.ten_san_pham
+        const queryPr = `SELECT sptd.*, sp.anh, sp.ten_san_pham, k.ten_kich_co
           FROM san_pham_trong_don AS sptd
           LEFT JOIN san_pham AS sp ON sptd.id_san_pham = sp.id 
+          LEFT JOIN kich_co_san_pham AS k ON sptd.kich_co = k.ma_kich_co
           WHERE id_don_hang = ${id_don_hang}`;
         connection.query(queryPr, (err, results2) => {
           if (err) {
@@ -281,6 +285,7 @@ const orderController = {
   //ADD ORDER
   addOrder: async (req, res) => {
     const {
+      ma_don = null,
       sdt_nguoi_nhan = "",
       ten_nguoi_nhan = "",
       tong_tien = 0,
@@ -292,65 +297,61 @@ const orderController = {
       id_qh = null,
       id_xp = null,
       dia_chi_chi_tiet = "",
+      chung_tu_tt = "",
       ds_san_pham = [],
     } = req.body;
-    const ma_don_hang = Date.now().toString();
+    const ma_don_hang = ma_don ? ma_don : Date.now().toString();
     const thoi_gian_dat = moment().format();
     try {
       const query = `
         INSERT INTO don_dat_hang (ma_don_hang, thoi_gian_dat, sdt_nguoi_nhan, ten_nguoi_nhan, tong_tien, kieu_thanh_toan, trang_thai, id_nguoi_dat, ghi_chu,
-          id_tp, id_qh, id_xp, dia_chi_chi_tiet) 
+          id_tp, id_qh, id_xp, dia_chi_chi_tiet, chung_tu_tt) 
         VALUES ('${ma_don_hang}', '${thoi_gian_dat}', '${sdt_nguoi_nhan}', '${ten_nguoi_nhan}', ${tong_tien}, ${kieu_thanh_toan}, 
-        ${trang_thai}, ${id_nguoi_dat},'${ghi_chu}', '${id_tp}', '${id_qh}', '${id_xp}', '${dia_chi_chi_tiet}')`;
+        ${trang_thai}, ${id_nguoi_dat},'${ghi_chu}', '${id_tp}', '${id_qh}', '${id_xp}', '${dia_chi_chi_tiet}', '${chung_tu_tt}')`;
       connection.query(query, (err, results) => {
-        if (err) {
-          res.status(500).json({
+        if (err)
+          return res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
           });
-        } else {
-          const id_don_hang = results.insertId;
-          const san_pham_them = ds_san_pham.map((product) => {
-            return [
-              id_don_hang,
-              product.id_san_pham,
-              product.gia_ban,
-              product.kich_co,
-              product.so_luong,
-            ];
-          });
-          const query = `INSERT INTO san_pham_trong_don (id_don_hang, id_san_pham, gia_ban, kich_co, so_luong) VALUES ?`;
-          connection.query(query, [san_pham_them], (err, results) => {
-            if (err) {
-              res.status(500).json({
-                status: 500,
-                isError: true,
-                Object: err,
-              });
-            } else {
+        const id_don_hang = results.insertId;
+        const san_pham_them = ds_san_pham.map((product) => {
+          return [
+            id_don_hang,
+            product.id_san_pham,
+            product.gia_ban,
+            product.kich_co,
+            product.so_luong,
+            product.gia_ban_goc,
+          ];
+        });
+        const query = `INSERT INTO san_pham_trong_don (id_don_hang, id_san_pham, gia_ban, kich_co, so_luong, gia_ban_goc) VALUES ?`;
+        connection.query(query, [san_pham_them], (err, results) => {
+          if (err) {
+            res.status(500).json({
+              status: 500,
+              isError: true,
+              Object: err,
+            });
+          } else {
+            const list_id = ds_san_pham.map((i) => i.id).toString();
+            const query = `DELETE FROM gio_hang WHERE id IN (${list_id})`;
+            connection.query(query, (error, results) => {
+              if (error)
+                res.status(500).json({
+                  status: 500,
+                  isError: true,
+                  Object: err,
+                });
               res.status(200).json({
                 status: 200,
                 isError: false,
                 Object: "Thêm đơn hàng thành công.",
               });
-              const list_id = ds_san_pham.map((i) => i.id).toString();
-              // .map(() => "?")
-              // .join(",");
-              const query = `DELETE FROM gio_hang WHERE id IN (${list_id})`;
-              connection.query(query, (error, results) => {
-                if (error) {
-                  res.status(500).json({
-                    status: 500,
-                    isError: true,
-                    Object: err,
-                  });
-                }
-              });
-            }
-          });
-        }
+            });
+          }
+        });
       });
     } catch (error) {
       res.status(500).json(error.message);
@@ -369,7 +370,6 @@ const orderController = {
         return res.status(200).json({
           status: 0,
           isError: true,
-          isOk: false,
           Object: "Id đâu rồi!",
         });
       const query = `
@@ -401,6 +401,66 @@ const orderController = {
             });
           }
         });
+        connection.query(
+          `SELECT d.*, n.email
+          FROM don_dat_hang AS d
+          LEFT JOIN nguoi_dung AS n ON d.id_nguoi_dat = n.id
+          WHERE d.id = ${id}`,
+          (err, results) => {
+            if (err)
+              return res.status(500).json({
+                status: 500,
+                isError: true,
+                Object: err,
+              });
+            const dataDetail = results[0];
+            let title = "";
+            let content = "";
+            switch (trang_thai) {
+              case 2:
+                title = "Đơn hàng đã được xác nhận";
+                content = `Đơn hàng mã "${
+                  dataDetail?.ma_don_hang
+                }" của bạn đã được xác nhận từ cửa hàng lúc ${moment(
+                  thoi_gian_cap_nhat
+                ).format("HH:mm DD/MM/YYYY")} và đang chờ đơn vị vận chuyển.`;
+                break;
+              case 2:
+                title = "Cập nhật trạng thái đơn";
+                content = `Đơn hàng mã "${dataDetail?.ma_don_hang}" của bạn đã được xác nhận từ cửa hàng và đang chờ đơn vị vận chuyển.`;
+                break;
+              case 3:
+                title = "Cập nhật trạng thái đơn";
+                content = `Đơn hàng mã "${dataDetail?.ma_don_hang}" của bạn đang trên đường giao.`;
+                break;
+              case 4:
+                title = "Đơn hàng đã giao thành công";
+                content = `Đơn hàng mã "${dataDetail?.ma_don_hang}" của bạn đã được giao thành công. 
+                Cảm ơn bạn đã đặt hàng và đừng quên đánh giá cảm nhận của bạn về sản phẩm nhé.`;
+                break;
+              case 6:
+                title = "Đơn hàng đã hủy";
+                content = `Đơn hàng mã "${dataDetail?.ma_don_hang}" của bạn đã hủy với lý do "${ly_do_huy_don}".`;
+                break;
+              default:
+                title = "";
+                content = "";
+            }
+            const mailOptions = {
+              from: "Tiệm cafe bất ổn",
+              to: dataDetail.email,
+              subject: title,
+              text: content,
+            };
+            gmailTransport.sendMail(mailOptions, (error, info) => {
+              if (error) {
+                console.error("Lỗi gửi email rồi ****************" + error);
+              } else {
+                console.log("Email sent: " + info.response);
+              }
+            });
+          }
+        );
       });
     } catch (error) {
       res.status(500).json(error.message);
@@ -584,7 +644,7 @@ const orderController = {
             });
           const total = countResult[0].total;
           const query = ` SELECT d.*, CONCAT(d.dia_chi_chi_tiet,", ", x.name,", ",q.name,", ",t.name) AS dia_chi_nhan_hang, 
-          s.ten_trang_thai, n.ho_ten AS ten_nguoi_dat, n.sdt AS sdt_nguoi_dat
+          s.ten_trang_thai, n.ho_ten AS ten_nguoi_dat, n.sdt AS sdt_nguoi_dat,  n.email AS email_nguoi_dat
           FROM don_dat_hang AS d
           LEFT JOIN nguoi_dung AS n ON d.id_nguoi_dat = n.id
           LEFT JOIN tinh_thanh_pho AS t ON d.id_tp = t.id
@@ -596,6 +656,7 @@ const orderController = {
           } ${fromDate ? `AND thoi_gian_dat >= ${fromDate}` : ""} ${
             toDate ? `AND thoi_gian_dat <= ${toDate}` : ""
           }
+          ORDER BY thoi_gian_dat DESC
           LIMIT ${startIndex}, ${parseInt(pageSize)}`;
           const setBtn = (trang_thai) => {
             switch (trang_thai) {

@@ -1,11 +1,13 @@
 const connection = require("../config/connectDB");
+const moment = require("moment");
 
 const cartController = {
   //GET ALL CART
   getListCart: async (req, res) => {
     const { id_nguoi_dung } = req.query;
     try {
-      const query = `SELECT g.*, s.anh, s.ten_san_pham, s.ghi_chu, s.gia_ban_sizes, s.gia_ban_sizem, s.gia_ban_sizel FROM gio_hang AS g 
+      const query = `SELECT g.*, s.*, s.id AS id_san_pham, g.id AS id
+      FROM gio_hang AS g 
       LEFT JOIN san_pham AS s ON g.id_san_pham = s.id
       WHERE id_nguoi_dung = ${id_nguoi_dung}`;
       connection.query(query, (err, results) => {
@@ -13,12 +15,22 @@ const cartController = {
           res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
           });
         } else {
           const listData = !!results.length
             ? results.map((item) => {
+                let isDiscord = false;
+                if (item.ngay_bd && item.ngay_kt && item.giam_gia) {
+                  const currentDate = moment();
+                  const dataMoment1 = moment(item.ngay_bd);
+                  const dataMoment2 = moment(item.ngay_kt);
+                  if (
+                    dataMoment1?.isBefore(currentDate) &&
+                    dataMoment2?.isAfter(currentDate)
+                  )
+                    isDiscord = true;
+                }
                 const gia_ban =
                   item?.kich_co === 1
                     ? item.gia_ban_sizes
@@ -32,7 +44,10 @@ const cartController = {
                     ? "Size M"
                     : "Size L";
                 return {
-                  gia_ban,
+                  gia_ban_goc: isDiscord ? gia_ban : 0,
+                  gia_ban: isDiscord
+                    ? gia_ban * ((100 - item.giam_gia) / 100)
+                    : gia_ban,
                   size,
                   id: item.id,
                   anh: item.anh,
@@ -46,7 +61,6 @@ const cartController = {
           res.status(200).json({
             status: 200,
             isError: false,
-            isOk: true,
             Object: listData,
           });
         }
@@ -138,7 +152,6 @@ const cartController = {
   deleteCart: async (req, res) => {
     try {
       const { cartIds } = req.body;
-
       if (!cartIds || !Array.isArray(cartIds) || cartIds.length === 0) {
         return res.status(400).json({
           status: 500,

@@ -14,6 +14,7 @@ const uploadFileRouter = require("./routers/uploadFileRouter");
 const cartRouter = require("./routers/cartRouter");
 const orderRouter = require("./routers/orderRouter");
 const rateRouter = require("./routers/rateRouter");
+const postRouter = require("./routers/postRouter");
 // const connectDB = require("./config/connectDB");
 //connect DB
 // connectDB();
@@ -35,6 +36,7 @@ app.use("/api/upload", uploadFileRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/order", orderRouter);
 app.use("/api/rate", rateRouter);
+app.use("/api/post", postRouter);
 
 app.listen(port, () => {
   console.log(`Server is running in port ${port}`);
