@@ -10,5 +10,6 @@ router.delete("/deletePost", postController.deletePost);
 router.post("/changeStatus", postController.changeStatus);
 router.post("/getListPostHome", postController.getListPostHome);
 router.post("/getDetailPostHome", postController.getDetailPostHome);
+router.get("/getListPostPopular", postController.getListPostPopular);
 
 module.exports = router;
