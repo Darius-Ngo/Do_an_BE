@@ -425,10 +425,6 @@ const orderController = {
                   thoi_gian_cap_nhat
                 ).format("HH:mm DD/MM/YYYY")} và đang chờ đơn vị vận chuyển.`;
                 break;
-              case 2:
-                title = "Cập nhật trạng thái đơn";
-                content = `Đơn hàng mã "${dataDetail?.ma_don_hang}" của bạn đã được xác nhận từ cửa hàng và đang chờ đơn vị vận chuyển.`;
-                break;
               case 3:
                 title = "Cập nhật trạng thái đơn";
                 content = `Đơn hàng mã "${dataDetail?.ma_don_hang}" của bạn đang trên đường giao.`;

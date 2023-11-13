@@ -30,8 +30,9 @@ const postController = {
           }
           const total = countResult[0].total;
           const query = `SELECT id, tieu_de, anh_mo_ta, ngay_dang, trang_thai, thu_tu, tom_tat, luot_xem FROM bai_viet 
+          WHERE ${condition} 
           ORDER BY thu_tu ASC, ngay_dang DESC
-          WHERE ${condition} LIMIT ${startIndex}, ${parseInt(pageSize)}`;
+          LIMIT ${startIndex}, ${parseInt(pageSize)}`;
           connection.query(query, (err, results) => {
             if (err) {
               res.status(500).json({
@@ -269,13 +270,13 @@ const postController = {
       id_the,
     } = req.body;
     const startIndex = (currentPage - 1) * pageSize;
-    const condition = `trang_thai = 1 AND
-    (tieu_de LIKE '${`%${textSearch}%`}' OR tom_tat LIKE '${`%${textSearch}%`}' OR noi_dung LIKE '${`%${textSearch}%`}')
-    ${id_the ? `AND the_bv LIKE '${`%${id_the}%`}'` : ""}
+    const condition = `bv.trang_thai = 1 AND
+    (bv.tieu_de LIKE '${`%${textSearch}%`}' OR bv.tom_tat LIKE '${`%${textSearch}%`}' OR bv.noi_dung LIKE '${`%${textSearch}%`}')
+    ${id_the ? `AND bv.the_bv LIKE '${`%${id_the}%`}'` : ""}
     `;
     try {
       connection.query(
-        `SELECT COUNT(*) AS total FROM bai_viet WHERE ${condition}`,
+        `SELECT COUNT(*) AS total FROM bai_viet AS bv WHERE ${condition}`,
         (err, countResult) => {
           if (err) {
             return res.status(500).json({
@@ -285,8 +286,12 @@ const postController = {
             });
           }
           const total = countResult[0].total;
-          const query = `SELECT id, tieu_de, anh_mo_ta, ngay_dang, luot_xem, tom_tat, the_bv FROM bai_viet 
+          const query = `SELECT bv.id, bv.tieu_de, bv.anh_mo_ta, bv.ngay_dang, bv.luot_xem,
+          bv.tom_tat, bv.the_bv, COUNT(bl.id) AS luot_bl
+          FROM bai_viet AS bv
+          LEFT JOIN binh_luan AS bl ON bv.id = bl.id_bai_viet
           WHERE ${condition}
+          GROUP BY bv.id
           ORDER BY thu_tu ASC, ngay_dang DESC
           LIMIT ${startIndex}, ${parseInt(pageSize)}`;
           connection.query(query, (err, results) => {
@@ -321,14 +326,6 @@ const postController = {
                 },
               });
             });
-            // res.status(200).json({
-            //   status: 200,
-            //   isError: false,
-            //   Object: {
-            //     total: total,
-            //     data: results,
-            //   },
-            // });
           });
         }
       );
@@ -347,7 +344,10 @@ const postController = {
           isError: true,
           Object: "ID bài viết đâu!",
         });
-      const query = `SELECT * FROM bai_viet WHERE id = ${id_bai_viet}`;
+      const query = `SELECT bv.*, COUNT(bl.id) AS luot_bl 
+      FROM bai_viet AS bv
+      LEFT JOIN binh_luan AS bl ON bv.id = bl.id_bai_viet
+      WHERE bv.id = ${id_bai_viet}`;
       connection.query(query, (err, results) => {
         if (err)
           return res.status(500).json({
@@ -355,11 +355,36 @@ const postController = {
             isError: true,
             Object: err,
           });
-        res.status(200).json({
-          status: 200,
-          isError: false,
-          Object: results[0],
-        });
+        const data = {
+          ...results[0],
+          binh_luan_bv: !!results[0]?.binh_luan_bv,
+        };
+        if (!data?.the_bv)
+          return res.status(200).json({
+            status: 200,
+            isError: false,
+            Object: data,
+          });
+        connection.query(
+          `SELECT id AS id_the, ten_the, ma_the FROM the_bai_viet WHERE id IN (${data?.the_bv}) AND trang_thai = 1`,
+          (err, results2) => {
+            if (err)
+              return res.status(500).json({
+                status: 500,
+                isError: true,
+                Object: err,
+              });
+            res.status(200).json({
+              status: 200,
+              isError: false,
+              Object: {
+                ...data,
+                the_bv: results2,
+              },
+            });
+          }
+        );
+
         const queryUpdate = `
         UPDATE bai_viet SET luot_xem = ${
           luot_xem + 1
@@ -377,10 +402,13 @@ const postController = {
     const { currentPage = 1, pageSize = 5 } = req.query;
     const startIndex = (currentPage - 1) * pageSize;
     try {
-      const query = `SELECT id, tieu_de, anh_mo_ta, ngay_dang, luot_xem, tom_tat FROM bai_viet 
-          WHERE trang_thai = 1
-          ORDER BY luot_xem DESC
-          LIMIT ${startIndex}, ${parseInt(pageSize)}`;
+      const query = `SELECT bv.id, tieu_de, anh_mo_ta, ngay_dang, luot_xem, tom_tat, COUNT(bl.id) AS luot_bl
+      FROM bai_viet AS bv
+      LEFT JOIN binh_luan AS bl ON bv.id = bl.id_bai_viet
+      WHERE bv.trang_thai = 1
+      GROUP BY bv.id
+      ORDER BY bv.luot_xem DESC
+      LIMIT ${startIndex}, ${parseInt(pageSize)}`;
       connection.query(query, (err, results) => {
         if (err) {
           res.status(500).json({

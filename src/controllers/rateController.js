@@ -90,9 +90,10 @@ const rateController = {
   getRateProduct: async (req, res) => {
     const { id_san_pham } = req.query;
     try {
-      const query = `SELECT *, AVG(danh_gia) AS danh_gia_trung_binh, COUNT(*) AS tong_danh_gia
+      const query = `SELECT *
       FROM nhan_xet_san_pham
       WHERE id_san_pham = ${id_san_pham}`;
+      //, AVG(danh_gia) AS danh_gia_trung_binh, COUNT(*) AS tong_danh_gia
       connection.query(query, (err, results) => {
         if (err)
           return res.status(500).json({
@@ -109,8 +110,12 @@ const rateController = {
           status: 200,
           isError: false,
           Object: {
-            danh_gia_trung_binh: +results[0]?.danh_gia_trung_binh,
-            tong_danh_gia: results[0]?.tong_danh_gia,
+            danh_gia_trung_binh:
+              results.reduce(
+                (i, currentValue) => i.danh_gia + currentValue,
+                0
+              ) / results?.length,
+            tong_danh_gia: results?.length,
             tong_1_sao: oneStar.length,
             tong_2_sao: twoStar.length,
             tong_3_sao: threeStar.length,

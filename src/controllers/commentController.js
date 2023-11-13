@@ -22,7 +22,9 @@ const commentController = {
               Object: err,
             });
           const total = countResult[0].total;
-          const query = `SELECT * FROM binh_luan 
+          const query = `SELECT bl.*, n.ho_ten, n.avatar
+          FROM binh_luan AS bl
+          LEFT JOIN nguoi_dung AS n ON bl.id_nguoi_dung = n.id
           WHERE id_bai_viet = ${id_bai_viet} LIMIT ${startIndex}, ${parseInt(
             pageSize
           )}`;

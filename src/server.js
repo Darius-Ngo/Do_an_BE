@@ -17,6 +17,7 @@ const rateRouter = require("./routers/rateRouter");
 const postRouter = require("./routers/postRouter");
 const tagsRouter = require("./routers/tagsRouter");
 const commentRouter = require("./routers/commentRouter");
+const requestSupportRouter = require("./routers/requestSupportRouter");
 // const connectDB = require("./config/connectDB");
 //connect DB
 // connectDB();
@@ -41,6 +42,7 @@ app.use("/api/rate", rateRouter);
 app.use("/api/post", postRouter);
 app.use("/api/tags", tagsRouter);
 app.use("/api/comment", commentRouter);
+app.use("/api/request", requestSupportRouter);
 
 app.listen(port, () => {
   console.log(`Server is running in port ${port}`);
