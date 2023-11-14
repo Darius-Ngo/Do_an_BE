@@ -23,8 +23,8 @@ const cartController = {
                 let isDiscord = false;
                 if (item.ngay_bd && item.ngay_kt && item.giam_gia) {
                   const currentDate = moment();
-                  const dataMoment1 = moment(item.ngay_bd);
-                  const dataMoment2 = moment(item.ngay_kt);
+                  const dataMoment1 = moment(item.ngay_bd).startOf("day");
+                  const dataMoment2 = moment(item.ngay_kt).endOf("day");
                   if (
                     dataMoment1?.isBefore(currentDate) &&
                     dataMoment2?.isAfter(currentDate)

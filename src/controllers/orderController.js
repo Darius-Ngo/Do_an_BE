@@ -622,15 +622,15 @@ const orderController = {
       pageSize = 1000,
     } = req.query;
     const startIndex = (currentPage - 1) * pageSize;
-
     try {
+      const condition = `(ma_don_hang LIKE '${`%${textSearch}%`}' OR 	ten_nguoi_nhan LIKE '${`%${textSearch}%`}' OR sdt_nguoi_nhan LIKE '${`%${textSearch}%`}') ${
+        +status > 0 ? `AND trang_thai=${status}` : ""
+      }  ${fromDate ? `AND thoi_gian_dat >= '${fromDate}'` : ""} ${
+        toDate ? `AND thoi_gian_dat <= '${toDate}'` : ""
+      }`;
       connection.query(
         `SELECT COUNT(*) AS total FROM don_dat_hang
-        WHERE ma_don_hang LIKE '${`%${textSearch}%`}' ${
-          +status !== 0 ? `AND trang_thai=${status}` : ""
-        }  ${fromDate ? `AND thoi_gian_dat >= ${fromDate}` : ""} ${
-          toDate ? `AND thoi_gian_dat <= ${toDate}` : ""
-        }`,
+        WHERE ${condition}`,
         (err, countResult) => {
           if (err)
             return res.status(500).json({
@@ -647,11 +647,7 @@ const orderController = {
           LEFT JOIN quan_huyen AS q ON d.id_qh = q.id
           LEFT JOIN xa_phuong AS x ON d.id_xp = x.id
           LEFT JOIN trang_thai_don AS s ON d.trang_thai = s.ma_trang_thai
-          WHERE ma_don_hang LIKE '${`%${textSearch}%`}' ${
-            +status !== 0 ? `AND d.trang_thai=${status}` : ""
-          } ${fromDate ? `AND thoi_gian_dat >= ${fromDate}` : ""} ${
-            toDate ? `AND thoi_gian_dat <= ${toDate}` : ""
-          }
+          WHERE ${condition}
           ORDER BY thoi_gian_dat DESC
           LIMIT ${startIndex}, ${parseInt(pageSize)}`;
           const setBtn = (trang_thai) => {

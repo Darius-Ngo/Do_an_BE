@@ -11,5 +11,6 @@ router.post("/changeStatus", postController.changeStatus);
 router.post("/getListPostHome", postController.getListPostHome);
 router.post("/getDetailPostHome", postController.getDetailPostHome);
 router.get("/getListPostPopular", postController.getListPostPopular);
+router.post("/updatePosition", postController.updatePosition);
 
 module.exports = router;

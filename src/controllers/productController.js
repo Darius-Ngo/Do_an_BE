@@ -52,8 +52,8 @@ const productController = {
                   let isDiscord = false;
                   if (i.ngay_bd && i.ngay_kt && i.giam_gia) {
                     const currentDate = moment();
-                    const dataMoment1 = moment(i.ngay_bd);
-                    const dataMoment2 = moment(i.ngay_kt);
+                    const dataMoment1 = moment(i.ngay_bd).startOf("day");
+                    const dataMoment2 = moment(i.ngay_kt).endOf("day");
                     if (
                       dataMoment1?.isBefore(currentDate) &&
                       dataMoment2?.isAfter(currentDate)
@@ -98,8 +98,8 @@ const productController = {
             productDetail.giam_gia
           ) {
             const currentDate = moment();
-            const dataMoment1 = moment(productDetail.ngay_bd);
-            const dataMoment2 = moment(productDetail.ngay_kt);
+            const dataMoment1 = moment(productDetail.ngay_bd).startOf("day");
+            const dataMoment2 = moment(productDetail.ngay_kt).endOf("day");
             if (
               dataMoment1?.isBefore(currentDate) &&
               dataMoment2?.isAfter(currentDate)
@@ -140,8 +140,8 @@ const productController = {
             let isDiscord = false;
             if (i.ngay_bd && i.ngay_kt && i.giam_gia) {
               const currentDate = moment();
-              const dataMoment1 = moment(i.ngay_bd);
-              const dataMoment2 = moment(i.ngay_kt);
+              const dataMoment1 = moment(i.ngay_bd).startOf("day");
+              const dataMoment2 = moment(i.ngay_kt).endOf("day");
               if (
                 dataMoment1?.isBefore(currentDate) &&
                 dataMoment2?.isAfter(currentDate)

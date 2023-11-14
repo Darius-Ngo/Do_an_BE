@@ -261,6 +261,34 @@ const postController = {
       res.status(500).json(error.message);
     }
   },
+  //UPDATE POSITION
+  updatePosition: async (req, res) => {
+    try {
+      const updates = req.body;
+      if (!updates || !Array.isArray(updates)) {
+        return res.status(400).json({ error: "Invalid data" });
+      }
+      updates.forEach((update) => {
+        const { id, thu_tu } = update;
+        const query = `UPDATE bai_viet SET thu_tu = ${thu_tu} WHERE id = ${id}`;
+        connection.query(query, (err, results) => {
+          if (err)
+            return res.status(500).json({
+              status: 500,
+              isError: true,
+              Object: err,
+            });
+        });
+      });
+      res.status(200).json({
+        status: 200,
+        isError: false,
+        Object: "Cập nhật thành công.",
+      });
+    } catch (error) {
+      res.status(500).json(error.message);
+    }
+  },
   // GET LIST POST IN HOME
   getListPostHome: async (req, res) => {
     const {

@@ -13,10 +13,14 @@ const userController = {
     } = req.body;
     const startIndex = (currentPage - 1) * pageSize;
     try {
+      const condition = `${
+        isCustomer ? `id_phan_quyen = 3 AND` : "id_phan_quyen <> 3 AND"
+      }  ${
+        status > 0 ? `trang_thai = ${status} AND` : ""
+      } (ho_ten LIKE '${`%${textSearch}%`}' OR sdt LIKE '${`%${textSearch}%`}' OR cccd LIKE '${`%${textSearch}%`}') `;
       connection.query(
-        `SELECT COUNT(*) AS total FROM nguoi_dung WHERE ${
-          isCustomer ? "id_phan_quyen = 3" : "id_phan_quyen <> 3"
-        } ${status > 0 ? `AND trang_thai = ${status}` : ""}`,
+        `SELECT COUNT(*) AS total FROM nguoi_dung 
+        WHERE ${condition}`,
         (err, countResult) => {
           if (err) {
             res.status(500).json({
@@ -33,13 +37,8 @@ const userController = {
           LEFT JOIN tinh_thanh_pho AS t ON n.id_tp = t.id 
           LEFT JOIN quan_huyen AS q ON n.id_qh = q.id  
           LEFT JOIN xa_phuong AS x ON n.id_xp = x.id
-          WHERE ${
-            isCustomer ? `id_phan_quyen = 3 AND` : "id_phan_quyen <> 3 AND"
-          }  ${
-            status > 0 ? `trang_thai = ${status} AND` : ""
-          } ho_ten LIKE '${`%${textSearch}%`}' LIMIT ${startIndex}, ${parseInt(
-            pageSize
-          )}`;
+          WHERE ${condition}
+          LIMIT ${startIndex}, ${parseInt(pageSize)}`;
           connection.query(query, (err, results) => {
             if (err) {
               res.status(500).json({
