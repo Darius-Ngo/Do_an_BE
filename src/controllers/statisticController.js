@@ -77,7 +77,7 @@ const statisticController = {
               isError: true,
               Object: err,
             });
-          const query = `SELECT SUM(std.so_luong) AS tong_sp_db, SUM(std.gia_ban) AS tong_tien, sp.ten_san_pham
+          const query = `SELECT SUM(std.so_luong) AS tong_sp_db, SUM(std.gia_ban * std.so_luong) AS tong_tien, sp.ten_san_pham
           FROM san_pham_trong_don AS std
           LEFT JOIN san_pham AS sp ON std.id_san_pham = sp.id
           WHERE std.id_don_hang IN (${results?.map((i) => i.id)?.toString()})
@@ -127,7 +127,7 @@ const statisticController = {
               isError: true,
               Object: err,
             });
-          const query = `SELECT SUM(std.so_luong) AS tong_sp_db, SUM(std.gia_ban) AS tong_tien, l.ten_loai_san_pham	
+          const query = `SELECT SUM(std.so_luong) AS tong_sp_db, SUM(std.gia_ban * std.so_luong) AS tong_tien, l.ten_loai_san_pham	
           FROM san_pham_trong_don AS std
           LEFT JOIN san_pham AS sp ON std.id_san_pham = sp.id
           LEFT JOIN loai_san_pham AS l ON sp.id_loai_san_pham  = l.id

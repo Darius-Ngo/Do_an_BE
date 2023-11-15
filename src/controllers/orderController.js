@@ -624,12 +624,12 @@ const orderController = {
     const startIndex = (currentPage - 1) * pageSize;
     try {
       const condition = `(ma_don_hang LIKE '${`%${textSearch}%`}' OR 	ten_nguoi_nhan LIKE '${`%${textSearch}%`}' OR sdt_nguoi_nhan LIKE '${`%${textSearch}%`}') ${
-        +status > 0 ? `AND trang_thai=${status}` : ""
-      }  ${fromDate ? `AND thoi_gian_dat >= '${fromDate}'` : ""} ${
-        toDate ? `AND thoi_gian_dat <= '${toDate}'` : ""
+        +status > 0 ? `AND d.trang_thai=${status}` : ""
+      }  ${fromDate ? `AND d.thoi_gian_dat >= '${fromDate}'` : ""} ${
+        toDate ? `AND d.thoi_gian_dat <= '${toDate}'` : ""
       }`;
       connection.query(
-        `SELECT COUNT(*) AS total FROM don_dat_hang
+        `SELECT COUNT(*) AS total FROM don_dat_hang AS d
         WHERE ${condition}`,
         (err, countResult) => {
           if (err)

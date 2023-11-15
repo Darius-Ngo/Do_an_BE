@@ -117,21 +117,29 @@ const userController = {
       id_xp = "",
       cccd = "",
     } = req.body;
-
     try {
       connection.query(
-        `SELECT * FROM nguoi_dung WHERE username = '${username}'`,
-        async (err, results) => {
+        `SELECT * FROM nguoi_dung WHERE username = '${username}' OR email = '${email}'`,
+        async (err, resultsCheck) => {
           if (err) {
             throw err;
           }
-          if (results.length > 0) {
-            return res.status(200).json({
-              Object: "Tên tài khoản đã tồn tại!",
-              status: 0,
-              isError: true,
-              isOk: false,
-            });
+          if (resultsCheck.length > 0) {
+            if (
+              username?.toLowerCase() ===
+              resultsCheck[0]?.username?.toLowerCase()
+            )
+              return res.status(200).json({
+                status: 0,
+                isError: true,
+                Object: "Tên tài khoản đã tồn tại!",
+              });
+            if (email?.toLowerCase() === resultsCheck[0]?.email?.toLowerCase())
+              return res.status(200).json({
+                status: 0,
+                isError: true,
+                Object: "Email đã tồn tại!",
+              });
           }
           const salt = await bcrypt.genSalt(10);
           const hashed = await bcrypt.hash(password, salt);
@@ -144,7 +152,6 @@ const userController = {
               data = {
                 status: 500,
                 isError: true,
-                isOk: false,
                 Object: err,
               };
               res.status(500).json(data);
@@ -152,7 +159,6 @@ const userController = {
               data = {
                 status: 200,
                 isError: false,
-                isOk: true,
                 Object: "Thêm người dùng thành công.",
               };
               res.status(200).json(data);
@@ -189,31 +195,53 @@ const userController = {
         return res.status(200).json({
           status: 0,
           isError: true,
-          isOk: false,
           Object: "Id người dùng đâu rồi!",
         });
-      const query = `
-      UPDATE nguoi_dung
-      SET avatar = '${avatar}', username = '${username}', ho_ten = '${ho_ten}', ngay_sinh = '${ngay_sinh}', trang_thai = ${trang_thai}, cccd = '${cccd}',
-          thon_xom = '${thon_xom}', email = '${email}', gioi_tinh = ${gioi_tinh}, sdt = '${sdt}', id_phan_quyen = ${id_phan_quyen}, id_tp = '${id_tp}', id_qh = '${id_qh}', id_xp = '${id_xp}'
-      WHERE id = ${id}`;
-      connection.query(query, (err, results) => {
-        if (err) {
-          res.status(500).json({
-            status: 500,
-            isError: true,
-            isOk: false,
-            Object: err,
-          });
-        } else {
-          res.status(200).json({
-            status: 200,
-            isError: false,
-            isOk: true,
-            Object: "Cập nhật người dùng thành công.",
+      connection.query(
+        `SELECT * FROM nguoi_dung WHERE username = '${username}' OR email = '${email}'`,
+        async (err, resultsCheck) => {
+          if (err) {
+            throw err;
+          }
+          if (resultsCheck.length > 0 && resultsCheck[0]?.id !== id) {
+            if (
+              username?.toLowerCase() ===
+              resultsCheck[0]?.username?.toLowerCase()
+            )
+              return res.status(200).json({
+                status: 0,
+                isError: true,
+                Object: "Tên tài khoản đã tồn tại!",
+              });
+            if (email?.toLowerCase() === resultsCheck[0]?.email?.toLowerCase())
+              return res.status(200).json({
+                status: 0,
+                isError: true,
+                Object: "Email đã tồn tại!",
+              });
+          }
+          const query = `
+            UPDATE nguoi_dung
+            SET avatar = '${avatar}', username = '${username}', ho_ten = '${ho_ten}', ngay_sinh = '${ngay_sinh}', trang_thai = ${trang_thai}, cccd = '${cccd}',
+                thon_xom = '${thon_xom}', email = '${email}', gioi_tinh = ${gioi_tinh}, sdt = '${sdt}', id_phan_quyen = ${id_phan_quyen}, id_tp = '${id_tp}', id_qh = '${id_qh}', id_xp = '${id_xp}'
+            WHERE id = ${id}`;
+          connection.query(query, (err, results) => {
+            if (err) {
+              res.status(500).json({
+                status: 500,
+                isError: true,
+                Object: err,
+              });
+            } else {
+              res.status(200).json({
+                status: 200,
+                isError: false,
+                Object: "Cập nhật người dùng thành công.",
+              });
+            }
           });
         }
-      });
+      );
     } catch (error) {
       res.status(500).json(error.message);
     }
@@ -229,7 +257,6 @@ const userController = {
           data = {
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
           };
           res.status(500).json(data);
@@ -238,7 +265,6 @@ const userController = {
             data = {
               status: 200,
               isError: false,
-              isOk: true,
               Object: `Không tồn tại người dùng có id = ${req.params.id}`,
             };
             res.status(200).json(data);
@@ -246,7 +272,6 @@ const userController = {
             data = {
               status: 200,
               isError: false,
-              isOk: true,
               Object: "Xóa người dùng thành công.",
             };
             res.status(200).json(data);

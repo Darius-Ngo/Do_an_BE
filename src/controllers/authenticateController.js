@@ -10,7 +10,6 @@ const authenticateController = {
   register: async (req, res) => {
     try {
       const {
-        avatar,
         username,
         password,
         ho_ten,
@@ -19,37 +18,54 @@ const authenticateController = {
         email,
         gioi_tinh,
         sdt,
-        id_phan_quyen = 1,
         id_tp,
         id_qh,
         id_xp,
       } = req.body;
       const salt = await bcrypt.genSalt(10);
       const hashed = await bcrypt.hash(password, salt);
-      const query = `
-      INSERT INTO nguoi_dung (avatar, username, password, ho_ten, ngay_sinh, thon_xom, email, gioi_tinh, sdt, id_phan_quyen) 
-      VALUES ('${avatar}', '${username}', '${hashed}', '${ho_ten}', '${ngay_sinh}', '${thon_xom}', '${email}', ${parseInt(
-        gioi_tinh
-      )}, '${sdt}', ${id_phan_quyen}, ${id_tp}, ${id_qh}, ${id_xp})`;
-      connection.query(query, (err, results) => {
-        let data;
-        if (err) {
-          data = {
+      const queryCheck = `SELECT * FROM nguoi_dung WHERE username = '${username}' OR email = '${email}'`;
+      connection.query(queryCheck, (err, resultsCheck) => {
+        if (err)
+          return res.status(500).json({
             status: 500,
             isError: true,
-            isOk: false,
             Object: err,
-          };
-          res.status(500).json(data);
-        } else {
-          data = {
-            status: 200,
-            isError: false,
-            isOk: true,
-            Object: "Thêm người dùng thành công.",
-          };
-          res.status(200).json(data);
+          });
+        if (resultsCheck?.length > 0) {
+          if (
+            username?.toLowerCase() === resultsCheck[0]?.username?.toLowerCase()
+          )
+            return res.status(200).json({
+              status: 0,
+              isError: true,
+              Object: "Tên tài khoản đã tồn tại!",
+            });
+          if (email?.toLowerCase() === resultsCheck[0]?.email?.toLowerCase())
+            return res.status(200).json({
+              status: 0,
+              isError: true,
+              Object: "Email đã tồn tại!",
+            });
         }
+        const query = `
+          INSERT INTO nguoi_dung (username, password, ho_ten, ngay_sinh, thon_xom, email, gioi_tinh, sdt, id_tp, id_qh, id_xp) 
+          VALUES ('${username}', '${hashed}', '${ho_ten}', '${ngay_sinh}', '${thon_xom}', '${email}', ${gioi_tinh}, '${sdt}', '${id_tp}', '${id_qh}', '${id_xp}')`;
+        connection.query(query, (err, results) => {
+          if (err) {
+            res.status(500).json({
+              status: 500,
+              isError: true,
+              Object: err,
+            });
+          } else {
+            res.status(200).json({
+              status: 200,
+              isError: false,
+              Object: "Đăng ký thành công.",
+            });
+          }
+        });
       });
     } catch (err) {
       res.status(500).json(err);
@@ -65,10 +81,14 @@ const authenticateController = {
           Object: "Tên đăng nhập hoặc mật khẩu không được để trống!",
           status: 0,
           isError: true,
-          isOk: false,
         });
       }
-      const query = `SELECT * FROM nguoi_dung WHERE username = '${username}' AND trang_thai = 1`;
+      const query = `SELECT n.*, CONCAT(n.thon_xom,", ", x.name,", ",q.name,", ",t.name) AS dia_chi  
+      FROM nguoi_dung AS n 
+      LEFT JOIN tinh_thanh_pho AS t ON n.id_tp = t.id 
+      LEFT JOIN quan_huyen AS q ON n.id_qh = q.id  
+      LEFT JOIN xa_phuong AS x ON n.id_xp = x.id
+      WHERE n.username = '${username}' AND n.trang_thai = 1`;
       connection.query(query, async (err, results) => {
         if (err) {
           throw err;
@@ -78,7 +98,6 @@ const authenticateController = {
             Object: "Tên đăng nhập không chính xác hoặc tài khoản đã bị khóa!",
             status: 0,
             isError: true,
-            isOk: false,
           });
         }
         const user = results[0];
@@ -91,7 +110,6 @@ const authenticateController = {
               Object: "Mật khẩu không chính xác!",
               Status: 200,
               isError: true,
-              isOk: false,
             });
           }
           const token = jwt.sign(
@@ -103,7 +121,6 @@ const authenticateController = {
           );
           res.status(200).json({
             status: 200,
-            isOk: true,
             isError: false,
             Object: {
               ...user,

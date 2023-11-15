@@ -112,7 +112,7 @@ const rateController = {
           Object: {
             danh_gia_trung_binh:
               results.reduce(
-                (i, currentValue) => i.danh_gia + currentValue,
+                (currentValue, i) => i.danh_gia + currentValue,
                 0
               ) / results?.length,
             tong_danh_gia: results?.length,
