@@ -306,6 +306,63 @@ const productController = {
       res.status(500).json(error.message);
     }
   },
+  //GET STATISTIC PRODUCT TREND
+  getListProductTrend: async (req, res) => {
+    const condition = `trang_thai = 4`;
+    try {
+      connection.query(
+        `SELECT id FROM don_dat_hang WHERE ${condition} `,
+        (err, results) => {
+          if (err)
+            return res.status(500).json({
+              status: 500,
+              isError: true,
+              Object: err,
+            });
+          const query = `SELECT SUM(std.so_luong) AS tong_sp_db, sp.*, 
+          IFNULL(AVG(nx.danh_gia), 0) AS danh_gia_trung_binh, IFNULL(COUNT(nx.id), 0) AS tong_danh_gia
+          FROM san_pham_trong_don AS std
+          LEFT JOIN san_pham AS sp ON std.id_san_pham = sp.id
+          LEFT JOIN nhan_xet_san_pham AS nx ON sp.id = nx.id_san_pham
+          WHERE std.id_don_hang IN (${results?.map((i) => i.id)?.toString()})
+          GROUP BY sp.id
+          ORDER BY tong_sp_db DESC
+          LIMIT 8`;
+          connection.query(query, (err, results2) => {
+            if (err)
+              return res.status(500).json({
+                status: 500,
+                isError: true,
+                Object: err,
+              });
+            res.status(200).json({
+              status: 200,
+              isError: false,
+              Object: results2.map((i) => {
+                let isDiscord = false;
+                if (i.ngay_bd && i.ngay_kt && i.giam_gia) {
+                  const currentDate = moment();
+                  const dataMoment1 = moment(i.ngay_bd).startOf("day");
+                  const dataMoment2 = moment(i.ngay_kt).endOf("day");
+                  if (
+                    dataMoment1?.isBefore(currentDate) &&
+                    dataMoment2?.isAfter(currentDate)
+                  )
+                    isDiscord = true;
+                }
+                return {
+                  ...i,
+                  isDiscord,
+                };
+              }),
+            });
+          });
+        }
+      );
+    } catch (err) {
+      res.status(500).json(err.message);
+    }
+  },
 };
 
 module.exports = productController;

@@ -4,7 +4,9 @@ const bcrypt = require("bcrypt");
 const timeTokenDefault = Math.floor(Date.now() / 1000) + 60 * 0;
 const timeRefreshTokenDefault = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 const moment = require("moment");
-// const con = db.promise();
+const gmailTransport = require("../config/gmailConfig");
+const { generateRandomString } = require("../lib/common");
+const otpDatabase = {};
 const authenticateController = {
   // REGISTER
   register: async (req, res) => {
@@ -71,7 +73,6 @@ const authenticateController = {
       res.status(500).json(err);
     }
   },
-
   //LOGIN
   login: async (req, res) => {
     try {
@@ -129,6 +130,158 @@ const authenticateController = {
           });
         });
       });
+    } catch (err) {
+      res.status(500).json(err);
+    }
+  },
+  //CHANGE PASSWORD
+  changePassWord: async (req, res) => {
+    try {
+      const { id, oldPassword, newPassword } = req.body;
+      const salt = await bcrypt.genSalt(10);
+      const hashed = await bcrypt.hash(newPassword, salt);
+      const query = `SELECT *  
+        FROM nguoi_dung
+        WHERE id = ${id}`;
+      connection.query(query, async (err, results) => {
+        if (err) {
+          throw err;
+        }
+        const user = results[0];
+        bcrypt.compare(
+          oldPassword,
+          user.password,
+          (bcryptError, bcryptResult) => {
+            if (bcryptError) {
+              throw bcryptError;
+            }
+            if (!bcryptResult)
+              return res.status(200).json({
+                Object: "Mật khẩu cũ không chính xác!",
+                Status: 0,
+                isError: true,
+              });
+            const query2 = `
+              UPDATE nguoi_dung
+              SET password = '${hashed}'
+              WHERE id = ${id}`;
+            connection.query(query2, (err, results2) => {
+              if (err)
+                return res.status(500).json({
+                  status: 500,
+                  isError: true,
+                  Object: err,
+                });
+              res.status(200).json({
+                status: 200,
+                isError: false,
+                Object: "Đổi mật khẩu thành công.",
+              });
+            });
+          }
+        );
+      });
+    } catch (err) {
+      res.status(500).json(err);
+    }
+  },
+  //FORGET PASSWORD
+  forgetPassWord: async (req, res) => {
+    try {
+      const { email } = req.body;
+      connection.query(
+        `SELECT * FROM nguoi_dung WHERE email = '${email}'`,
+        (err, results) => {
+          if (err)
+            return res.status(500).json({
+              status: 500,
+              isError: true,
+              Object: err,
+            });
+          if (results?.length === 0)
+            return res.status(400).json({
+              status: 0,
+              isError: true,
+              Object: "Email không chính xác",
+            });
+          // Tạo mã OTP ngẫu nhiên
+          const otp = Math.floor(100000 + Math.random() * 900000).toString();
+          // Lưu mã OTP vào cơ sở dữ liệu tạm thời
+          otpDatabase[otp] = {
+            otp: otp,
+            email: email,
+          };
+          // Gửi email chứa mã OTP
+          const mailOptions = {
+            from: "Tiệm cafe bất ổn",
+            to: email,
+            subject: "OTP Xác nhận",
+            text: `Mã OTP để lấy lại mật khẩu của bạn là: ${otp}`,
+          };
+          gmailTransport.sendMail(mailOptions, (error, info) => {
+            if (error) {
+              console.error("Lỗi gửi email rồi ****************" + error);
+            } else {
+              res.status(200).json({
+                isError: false,
+                status: 200,
+                Object: "Kiểm tra Email.",
+              });
+            }
+          });
+        }
+      );
+    } catch (err) {
+      res.status(500).json(err);
+    }
+  },
+  //CONFIRM OTP
+  confirmOTP: async (req, res) => {
+    try {
+      const { otp } = req.body;
+      // Kiểm tra mã OTP
+      if (otpDatabase[otp]?.otp === otp) {
+        // Lưu mật khẩu mới vào cơ sở dữ liệu tạm thời
+        const newPassWord = generateRandomString(8);
+        const salt = await bcrypt.genSalt(10);
+        const hashed = await bcrypt.hash(newPassWord, salt);
+        const query2 = `
+        UPDATE nguoi_dung
+        SET password = '${hashed}'
+        WHERE email = '${otpDatabase[otp]?.email}'`;
+        connection.query(query2, (err, results2) => {
+          if (err)
+            return res.status(500).json({
+              status: 500,
+              isError: true,
+              Object: err,
+            });
+          // Gửi email chứa mã OTP
+          const mailOptions = {
+            from: "Tiệm cafe bất ổn",
+            to: otpDatabase[otp]?.email,
+            subject: "Mật khẩu của bạn",
+            text: `Mật khẩu của bạn là: ${newPassWord}`,
+          };
+          gmailTransport.sendMail(mailOptions, (error, info) => {
+            if (error) {
+              console.error("Lỗi gửi email rồi ****************" + error);
+            } else {
+              res.status(200).json({
+                isError: false,
+                status: 200,
+                Object: "Kiểm tra Email.",
+              });
+            }
+          });
+        });
+      } else {
+        res.status(400).json({
+          isError: true,
+          status: 0,
+          message: "Mã OTP không chính xác!",
+        });
+      }
     } catch (err) {
       res.status(500).json(err);
     }
