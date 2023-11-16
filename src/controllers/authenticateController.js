@@ -84,15 +84,20 @@ const authenticateController = {
           isError: true,
         });
       }
-      const query = `SELECT n.*, CONCAT(n.thon_xom,", ", x.name,", ",q.name,", ",t.name) AS dia_chi  
+      const query = `SELECT n.*, CONCAT(n.thon_xom,", ", x.name,", ",q.name,", ",t.name) AS dia_chi, p.*
       FROM nguoi_dung AS n 
       LEFT JOIN tinh_thanh_pho AS t ON n.id_tp = t.id 
       LEFT JOIN quan_huyen AS q ON n.id_qh = q.id  
       LEFT JOIN xa_phuong AS x ON n.id_xp = x.id
+      LEFT JOIN phan_quyen AS p ON p.id = n.id_phan_quyen
       WHERE n.username = '${username}' AND n.trang_thai = 1`;
       connection.query(query, async (err, results) => {
         if (err) {
-          throw err;
+          return res.status(500).json({
+            Object: err,
+            status: 500,
+            isError: true,
+          });
         }
         if (results.length === 0) {
           return res.status(200).json({
