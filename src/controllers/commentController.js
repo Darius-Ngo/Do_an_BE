@@ -25,9 +25,9 @@ const commentController = {
           const query = `SELECT bl.*, n.ho_ten, n.avatar
           FROM binh_luan AS bl
           LEFT JOIN nguoi_dung AS n ON bl.id_nguoi_dung = n.id
-          WHERE id_bai_viet = ${id_bai_viet} LIMIT ${startIndex}, ${parseInt(
-            pageSize
-          )}`;
+          WHERE id_bai_viet = ${id_bai_viet} 
+          ORDER BY 	thoi_gian_bl DESC
+          LIMIT ${startIndex}, ${parseInt(pageSize)}`;
           connection.query(query, (err, results) => {
             if (err)
               return res.status(500).json({
