@@ -87,7 +87,11 @@ const orderController = {
     try {
       connection.query(
         `SELECT COUNT(*) AS total FROM don_dat_hang 
-        WHERE id_nguoi_dat = ${id_nguoi_dat}  ${
+        WHERE ${
+          !!id_nguoi_dat
+            ? `id_nguoi_dat = ${id_nguoi_dat}`
+            : "ma_don_hang LIKE '%%'"
+        }  ${
           +status !== 0 ? `AND trang_thai=${status}` : ""
         } AND ma_don_hang LIKE '${`%${textSearch}%`}' ${
           fromDate ? `AND thoi_gian_dat >= ${fromDate}` : ""
@@ -107,7 +111,11 @@ const orderController = {
           LEFT JOIN quan_huyen AS q ON d.id_qh = q.id  
           LEFT JOIN xa_phuong AS x ON d.id_xp = x.id
           LEFT JOIN trang_thai_don AS s ON d.trang_thai = s.ma_trang_thai
-          WHERE id_nguoi_dat = ${id_nguoi_dat}  ${
+          WHERE ${
+            !!id_nguoi_dat
+              ? `id_nguoi_dat = ${id_nguoi_dat}`
+              : "ma_don_hang LIKE '%%'"
+          } ${
             +status !== 0 ? `AND trang_thai=${status}` : ""
           } AND ma_don_hang LIKE '${`%${textSearch}%`}' ${
             fromDate ? `AND thoi_gian_dat >= ${fromDate}` : ""

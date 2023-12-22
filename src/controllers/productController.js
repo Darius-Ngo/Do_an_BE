@@ -1,6 +1,8 @@
 const connection = require("../config/connectDB");
 const con = connection.promise();
 const moment = require("moment");
+const excel = require("exceljs");
+
 const productController = {
   //GET ALL PRODUCT
   getListProduct: async (req, res) => {
@@ -78,44 +80,55 @@ const productController = {
   //GET DETAIL PRODUCT
   getDetailProduct: async (req, res) => {
     try {
-      const query = `SELECT s.*, IFNULL(AVG(nx.danh_gia), 0) AS danh_gia_trung_binh, IFNULL(COUNT(nx.id), 0) AS tong_danh_gia
-      FROM san_pham AS s
-      LEFT JOIN nhan_xet_san_pham AS nx ON s.id = nx.id_san_pham
-      WHERE s.id = ${req.params.id}`;
-      connection.query(query, async (err, results) => {
-        if (err) {
-          res.status(500).json({
-            status: 500,
-            isError: true,
-            Object: err,
-          });
-        } else {
-          const productDetail = results[0];
-          let isDiscord = false;
-          if (
-            productDetail.ngay_bd &&
-            productDetail.ngay_kt &&
-            productDetail.giam_gia
-          ) {
-            const currentDate = moment();
-            const dataMoment1 = moment(productDetail.ngay_bd).startOf("day");
-            const dataMoment2 = moment(productDetail.ngay_kt).endOf("day");
-            if (
-              dataMoment1?.isBefore(currentDate) &&
-              dataMoment2?.isAfter(currentDate)
-            )
-              isDiscord = true;
-          }
-          res.status(200).json({
-            status: 200,
-            isError: false,
-            Object: {
-              ...productDetail,
-              isDiscord,
-            },
+      connection.query(
+        `SELECT SUM(std.so_luong) AS tong_sp_db
+      FROM san_pham_trong_don AS std
+      WHERE std.id_san_pham = ${req.params.id}`,
+        async (err, resultsCount) => {
+          const query = `SELECT s.*, IFNULL(AVG(nx.danh_gia), 0) AS danh_gia_trung_binh, 
+          IFNULL(COUNT(nx.id), 0) AS tong_danh_gia
+          FROM san_pham AS s
+          LEFT JOIN nhan_xet_san_pham AS nx ON s.id = nx.id_san_pham
+          WHERE s.id = ${req.params.id}`;
+          connection.query(query, async (err, results) => {
+            if (err) {
+              res.status(500).json({
+                status: 500,
+                isError: true,
+                Object: err,
+              });
+            } else {
+              const productDetail = results[0];
+              let isDiscord = false;
+              if (
+                productDetail.ngay_bd &&
+                productDetail.ngay_kt &&
+                productDetail.giam_gia
+              ) {
+                const currentDate = moment();
+                const dataMoment1 = moment(productDetail.ngay_bd).startOf(
+                  "day"
+                );
+                const dataMoment2 = moment(productDetail.ngay_kt).endOf("day");
+                if (
+                  dataMoment1?.isBefore(currentDate) &&
+                  dataMoment2?.isAfter(currentDate)
+                )
+                  isDiscord = true;
+              }
+              res.status(200).json({
+                status: 200,
+                isError: false,
+                Object: {
+                  ...productDetail,
+                  tong_sp_db: resultsCount[0]?.tong_sp_db,
+                  isDiscord,
+                },
+              });
+            }
           });
         }
-      });
+      );
     } catch (err) {
       res.status(500).json(err.message);
     }
@@ -359,6 +372,93 @@ const productController = {
           });
         }
       );
+    } catch (err) {
+      res.status(500).json(err.message);
+    }
+  },
+
+  //EXPORT EXCEL
+  exportExcel: async (req, res) => {
+    const {
+      currentPage = 1,
+      pageSize = 10000,
+      textSearch = "",
+      status,
+      id_loai_san_pham,
+    } = req.body;
+    const startIndex = (currentPage - 1) * pageSize;
+    try {
+      const query = `SELECT s.*, IFNULL(AVG(nx.danh_gia), 0) AS danh_gia_trung_binh, IFNULL(COUNT(nx.id), 0) AS tong_danh_gia
+      FROM san_pham AS s
+      LEFT JOIN nhan_xet_san_pham AS nx ON s.id = nx.id_san_pham
+      WHERE id_loai_san_pham = ${id_loai_san_pham} AND 
+      ${status > 0 ? `trang_thai_sp = ${status} AND` : ""} 
+      ten_san_pham LIKE '${`%${textSearch}%`}' 
+      GROUP BY s.id
+      LIMIT ${startIndex}, ${parseInt(pageSize)}
+      `;
+      connection.query(query, (err, results) => {
+        if (err)
+          return res.status(500).json({
+            status: 500,
+            isError: true,
+            Object: err,
+          });
+        // Tạo một workbook mới
+        const workbook = new excel.Workbook();
+        const worksheet = workbook.addWorksheet("Danh sách sản phẩm");
+        // Thêm dữ liệu vào worksheet
+        worksheet.columns = [
+          { header: "Tên sản phẩm", key: "ten_san_pham", width: 30 },
+          { header: "Ảnh sản phẩm", key: "anh", width: 30 },
+          { header: "Giá Size S", key: "gia_ban_sizes", width: 10 },
+          { header: "Giá Size M", key: "gia_ban_sizem", width: 10 },
+          { header: "Giá Size L", key: "gia_ban_sizel", width: 10 },
+          { header: "Trạng thái", key: "trang_thai_sp", width: 25 },
+          { header: "Ghi chú", key: "	ghi_chu", width: 25 },
+          { header: "Mô tả", key: "mo_ta", width: 100 },
+        ];
+        const data = results.map((i) => ({
+          ...i,
+          trang_thai_sp:
+            i.trang_thai_sp === 1 ? "Đang hoạt động" : "Không hoạt động",
+        }));
+        worksheet.addRows(data);
+        // Áp dụng border cho toàn bảng
+        worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+          row.eachCell({ includeEmpty: true }, (cell) => {
+            cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" },
+            };
+          });
+        });
+        // Áp dụng màu nền cho phần header
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFCCCCCC" }, // Màu xám nhạt
+          };
+          cell.font = { bold: true }; // Làm đậm chữ
+          cell.alignment = { horizontal: "center" }; // Căn giữa header
+        });
+        // Xuất file Excel
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=" + "example.xlsx"
+        );
+        return workbook.xlsx.write(res).then(() => {
+          res.status(200).end();
+        });
+      });
     } catch (err) {
       res.status(500).json(err.message);
     }

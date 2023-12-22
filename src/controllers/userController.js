@@ -1,5 +1,6 @@
 const connection = require("../config/connectDB");
 const bcrypt = require("bcrypt");
+const excel = require("exceljs");
 
 const userController = {
   //GET ALL USER
@@ -354,6 +355,107 @@ const userController = {
       });
     } catch (error) {
       res.status(500).json(error.message);
+    }
+  },
+  //EXPORT EXCEL
+  exportExcel: async (req, res) => {
+    const {
+      currentPage = 1,
+      pageSize = 10000,
+      textSearch = "",
+      isCustomer = false,
+      status,
+    } = req.body;
+    const startIndex = (currentPage - 1) * pageSize;
+    try {
+      const condition = `${
+        isCustomer ? `id_phan_quyen = 3 AND` : "id_phan_quyen <> 3 AND"
+      }  ${
+        status > 0 ? `trang_thai = ${status} AND` : ""
+      } (ho_ten LIKE '${`%${textSearch}%`}' OR sdt LIKE '${`%${textSearch}%`}' OR cccd LIKE '${`%${textSearch}%`}') `;
+      const query = `
+      SELECT n.*, CONCAT(n.thon_xom,", ", x.name,", ",q.name,", ",t.name) AS dia_chi 
+      FROM nguoi_dung AS n 
+      LEFT JOIN tinh_thanh_pho AS t ON n.id_tp = t.id 
+      LEFT JOIN quan_huyen AS q ON n.id_qh = q.id  
+      LEFT JOIN xa_phuong AS x ON n.id_xp = x.id
+      WHERE ${condition}
+      LIMIT ${startIndex}, ${parseInt(pageSize)}`;
+      connection.query(query, (err, results) => {
+        if (err)
+          return res.status(500).json({
+            status: 500,
+            isError: true,
+            Object: err,
+          });
+
+        // Tạo một workbook mới
+        const workbook = new excel.Workbook();
+        const worksheet = workbook.addWorksheet(
+          isCustomer ? "Tài khoản khách hàng" : "Tài khoản nhân viên"
+        );
+        // Thêm dữ liệu vào worksheet
+        worksheet.columns = [
+          { header: "Tên tài khoản", key: "username", width: 20 },
+          { header: "Ảnh đại diện", key: "avatar", width: 30 },
+          { header: "Họ tên", key: "ho_ten", width: 25 },
+          { header: "Số CCCD", key: "cccd", width: 20 },
+          { header: "Số SĐT", key: "sdt", width: 20 },
+          { header: "Email", key: "email", width: 25 },
+          { header: "Giới tính", key: "gioi_tinh", width: 10 },
+          { header: "Ngày sinh", key: "ngay_sinh", width: 20 },
+          { header: "Địa chỉ", key: "dia_chi", width: 50 },
+          { header: "Trạng thái", key: "trang_thai", width: 20 },
+        ];
+        const data = results.map((i) => ({
+          ...i,
+          gioi_tinh: i.gioi_tinh === 1 ? "Nam" : "Nữ",
+          trang_thai: i.trang_thai === 1 ? "Đang hoạt động" : "Không hoạt động",
+        }));
+        worksheet.addRows(data);
+        // Áp dụng border cho toàn bảng
+        worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+          row.eachCell({ includeEmpty: true }, (cell) => {
+            cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" },
+            };
+          });
+        });
+
+        // Áp dụng màu nền cho phần header
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFCCCCCC" }, // Màu xám nhạt
+          };
+          cell.font = { bold: true }; // Làm đậm chữ
+          cell.alignment = { horizontal: "center" }; // Căn giữa header
+        });
+        // // Thêm tiêu đề phía trên bảng
+        // worksheet.mergeCells("A1:D1"); // Ghép ô từ A1 đến D1
+        // const titleCell = worksheet.getCell("A1");
+        // titleCell.value = "Tiêu Đề Phía Trên Bảng";
+        // titleCell.font = { bold: true, size: 16 }; // Làm đậm và đặt kích thước chữ
+        // Xuất file Excel
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=" + "example.xlsx"
+        );
+        return workbook.xlsx.write(res).then(() => {
+          res.status(200).end();
+        });
+      });
+    } catch (err) {
+      res.status(500).json(err.message);
     }
   },
 };

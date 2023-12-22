@@ -3,6 +3,7 @@ const productController = require("../controllers/productController");
 const router = require("express").Router();
 
 router.post("/getListProduct", productController.getListProduct);
+router.post("/exportExcel", productController.exportExcel);
 router.get("/getDetailProduct/:id", productController.getDetailProduct);
 router.get("/getListProductTrend", productController.getListProductTrend);
 router.get(

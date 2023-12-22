@@ -1,5 +1,6 @@
 const connection = require("../config/connectDB");
 const moment = require("moment");
+const excel = require("exceljs");
 
 const categoryController = {
   //GET ALL CATEGORY
@@ -211,6 +212,7 @@ const categoryController = {
   // GET LIST CATEGORY IN HOME
   getListCategoryInHome: async (req, res) => {
     try {
+      const { textSearch = "" } = req.query;
       const query1 = `SELECT * FROM loai_san_pham WHERE trang_thai = 1`;
       connection.query(query1, (err, resultsCategory) => {
         if (err)
@@ -222,7 +224,7 @@ const categoryController = {
         const query2 = `SELECT s.*, IFNULL(AVG(nx.danh_gia), 0) AS danh_gia_trung_binh, IFNULL(COUNT(nx.id), 0) AS tong_danh_gia
         FROM san_pham AS s
         LEFT JOIN nhan_xet_san_pham AS nx ON s.id = nx.id_san_pham
-        WHERE s.trang_thai_sp = 1
+        WHERE s.trang_thai_sp = 1 AND s.ten_san_pham LIKE '${`%${textSearch}%`}'
         GROUP BY s.id
         `;
         connection.query(query2, (err, resultsProduct) => {
@@ -259,6 +261,83 @@ const categoryController = {
             isError: false,
             Object: data,
           });
+        });
+      });
+    } catch (err) {
+      res.status(500).json(err.message);
+    }
+  },
+  //EXPORT EXCEL
+  exportExcel: async (req, res) => {
+    const {
+      currentPage = 1,
+      pageSize = 10000,
+      textSearch = "",
+      status,
+    } = req.body;
+    const startIndex = (currentPage - 1) * pageSize;
+    try {
+      const query = `SELECT * FROM loai_san_pham WHERE ${
+        status > 0 ? `trang_thai = ${status} AND` : ""
+      } ten_loai_san_pham LIKE '${`%${textSearch}%`}' LIMIT ${startIndex}, ${parseInt(
+        pageSize
+      )}`;
+      connection.query(query, (err, results) => {
+        if (err)
+          return res.status(500).json({
+            status: 500,
+            isError: true,
+            Object: err,
+          });
+        // Tạo một workbook mới
+        const workbook = new excel.Workbook();
+        const worksheet = workbook.addWorksheet("Danh sách loại sản phẩm");
+        // Thêm dữ liệu vào worksheet
+        worksheet.columns = [
+          { header: "Tên loại sản phẩm", key: "ten_loai_san_pham", width: 50 },
+          { header: "Ghi chú", key: "ghi_chu", width: 30 },
+          { header: "Trạng thái", key: "trang_thai", width: 25 },
+          { header: "Mô tả", key: "mo_ta", width: 100 },
+        ];
+        const data = results.map((i) => ({
+          ...i,
+          trang_thai: i.trang_thai === 1 ? "Đang hoạt động" : "Không hoạt động",
+        }));
+        worksheet.addRows(data);
+        // Áp dụng border cho toàn bảng
+        worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+          row.eachCell({ includeEmpty: true }, (cell) => {
+            cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" },
+            };
+          });
+        });
+
+        // Áp dụng màu nền cho phần header
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFCCCCCC" }, // Màu xám nhạt
+          };
+          cell.font = { bold: true }; // Làm đậm chữ
+          cell.alignment = { horizontal: "center" }; // Căn giữa header
+        });
+        // Xuất file Excel
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=" + "example.xlsx"
+        );
+        return workbook.xlsx.write(res).then(() => {
+          res.status(200).end();
         });
       });
     } catch (err) {
